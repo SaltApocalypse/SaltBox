@@ -1,0 +1,49 @@
+<Window
+    x:Class="SaltBox.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    Title="SaltBox">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <controls:TitleBar x:Name="AppTitleBar"
+                           Title="SaltBox"
+                           Subtitle="Preview"
+                           IsPaneToggleButtonVisible="True"
+                           PaneToggleRequested="OnPaneToggleRequested" />
+
+        <controls:NavigationView
+            x:Name="NavView"
+            Grid.Row="1"
+            IsTitleBarAutoPaddingEnabled="False"
+            IsBackButtonVisible="Collapsed"
+            IsPaneToggleButtonVisible="False"
+            IsSettingsVisible="True"
+            ItemInvoked="OnItemInvoked"
+            Loaded="OnLoaded">
+
+            <controls:NavigationView.MenuItems>
+                <controls:NavigationViewItem
+                    Tag="Home" Icon="Home"
+                    Content="{x:Bind Lang.NavHome, Mode=OneWay}" />
+                <controls:NavigationViewItemSeparator />
+                <controls:NavigationViewItemHeader
+                    Content="{x:Bind Lang.NavTools, Mode=OneWay}" />
+                <controls:NavigationViewItem
+                    Tag="Screenshot" Icon="Camera"
+                    Content="{x:Bind Lang.NavScreenshot, Mode=OneWay}" />
+            </controls:NavigationView.MenuItems>
+
+            <Frame x:Name="ContentFrame" />
+        </controls:NavigationView>
+    </Grid>
+</Window>

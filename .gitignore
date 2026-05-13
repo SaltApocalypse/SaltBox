@@ -1,0 +1,43 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.sln.docstates
+*.userprefs
+
+## Visual Studio
+.vs/
+*.csproj.user
+*.dbmdl
+*.jfm
+
+## VS Code
+.vscode/
+*.swp
+*.swo
+*~
+
+## WinUI / MSIX
+SaltBox (Package)/Bin/
+SaltBox (Package)/obj/
+*.appx
+*.msix
+*.appxbundle
+*.msixbundle
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+ARM64/
+[Pp]ublish/
+
+## Logs
+SaltBox/Logs/
+*.log
+
+## OS
+.DS_Store
+Thumbs.db
