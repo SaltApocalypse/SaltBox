@@ -1,4 +1,3 @@
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using SaltBox.ViewModels;
 
@@ -12,10 +11,5 @@ public sealed partial class HomePage : Page
     {
         ViewModel = viewModel;
         InitializeComponent();
-    }
-
-    private void OnToolsClick(object sender, RoutedEventArgs e)
-    {
-        // Tools section navigation will be added when modules exist
     }
 }

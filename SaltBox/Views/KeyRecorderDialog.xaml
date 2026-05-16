@@ -1,0 +1,65 @@
+<ContentDialog
+    x:Class="SaltBox.Views.KeyRecorderDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:keycap="using:SaltBox.Controls"
+    Title="{x:Bind TitleText, Mode=OneWay}"
+    PrimaryButtonText="{x:Bind SaveText, Mode=OneWay}"
+    SecondaryButtonText="{x:Bind CancelText, Mode=OneWay}"
+    IsPrimaryButtonEnabled="False"
+    PrimaryButtonStyle="{StaticResource AccentButtonStyle}"
+    PrimaryButtonClick="OnPrimaryButtonClick"
+    Loaded="ContentDialog_Loaded"
+    Unloaded="ContentDialog_Unloaded">
+
+    <StackPanel x:Name="RootPanel" Spacing="16">
+        <TextBox
+            x:Name="KeyCaptureBox"
+            Width="0" Height="0"
+            Opacity="0"
+            IsTabStop="False"
+            KeyDown="OnCaptureKeyDown" />
+
+        <TextBlock x:Name="InstructionText" TextWrapping="Wrap" />
+
+        <Border
+            Background="{ThemeResource CardBackgroundFillColorDefault}"
+            CornerRadius="8"
+            Padding="16"
+            MinHeight="56">
+            <ItemsControl x:Name="KeyList">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <keycap:KeyCap KeyText="{Binding}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
+
+        <InfoBar
+            x:Name="WarningBar"
+            Severity="Warning"
+            IsOpen="False"
+            IsClosable="False"
+            Title="{x:Bind WarningTitle, Mode=OneWay}"
+            Message="{x:Bind WarningMessage, Mode=OneWay}" />
+
+        <InfoBar
+            x:Name="ConflictBar"
+            Severity="Error"
+            IsOpen="False"
+            IsClosable="False" />
+
+        <Button
+            x:Name="ResetButton"
+            Content="{x:Bind ResetText, Mode=OneWay}"
+            IsEnabled="False"
+            HorizontalAlignment="Center"
+            Click="OnResetClick" />
+    </StackPanel>
+</ContentDialog>

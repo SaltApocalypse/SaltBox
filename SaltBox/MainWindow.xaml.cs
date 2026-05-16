@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.Windows.AppNotifications;
 using SaltBox.Services;
 using SaltBox.Views;
 
@@ -13,6 +14,7 @@ public sealed partial class MainWindow : Window
     private readonly LogService _log;
     private readonly ThemeService _theme;
     private readonly AppWindow _appWindow;
+    private ScreenshotService? _screenshot;
     private string? _currentTag;
 
     public CultureService Lang { get; }
@@ -65,6 +67,13 @@ public sealed partial class MainWindow : Window
             };
         };
 
+        if (AppNotificationManager.IsSupported())
+            try { AppNotificationManager.Default.Register(); } catch { }
+
+        _screenshot = _services.GetRequiredService<ScreenshotService>();
+        _screenshot.RegisterGlobalHotkey();
+        Closed += (_, _) => _screenshot.UnregisterGlobalHotkey();
+
         NavView.SelectedItem = NavView.MenuItems[0];
         NavigateTo("Home");
         _log.Info("MainWindow loaded");
@@ -105,7 +114,11 @@ public sealed partial class MainWindow : Window
         if (pageType is null)
             return;
 
-        ContentFrame.Content = _services.GetRequiredService(pageType);
+        var page = (Page)_services.GetRequiredService(pageType);
+        if (page is HomePage homePage)
+            homePage.ViewModel.NavigateToTool = NavigateTo;
+
+        ContentFrame.Content = page;
 
         NavView.Header = tag switch
         {

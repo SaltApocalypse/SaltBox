@@ -3,8 +3,177 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:SaltBox.Views"
-    xmlns:vm="using:SaltBox.ViewModels">
+    xmlns:vm="using:SaltBox.ViewModels"
+    xmlns:keycap="using:SaltBox.Controls"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    xmlns:converters="using:SaltBox.Converters">
 
-    <Grid>
-    </Grid>
+    <Page.Resources>
+        <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
+    </Page.Resources>
+
+    <ScrollViewer>
+        <StackPanel Spacing="24" Margin="36,36,36,24">
+
+            <TextBlock
+                Text="{x:Bind ViewModel.Lang.ScreenshotDescription, Mode=OneWay}"
+                Style="{StaticResource BodyTextBlockStyle}"
+                TextWrapping="Wrap" />
+
+            <StackPanel Spacing="12">
+                <controls:SettingsCard
+                Header="{x:Bind ViewModel.Lang.ScreenshotEnable, Mode=OneWay}"
+                Description="{x:Bind ViewModel.Lang.ScreenshotEnableDescription, Mode=OneWay}">
+                    <ToggleSwitch
+                    IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
+                    OnContent="{x:Bind ViewModel.Lang.ScreenshotEnableOn, Mode=OneWay}"
+                    OffContent="{x:Bind ViewModel.Lang.ScreenshotEnableOff, Mode=OneWay}"
+                    HorizontalAlignment="Right" />
+                </controls:SettingsCard>
+
+                <controls:SettingsExpander
+                IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
+                Header="{x:Bind ViewModel.Lang.ScreenshotTest, Mode=OneWay}">
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Header="{x:Bind ViewModel.Lang.ScreenshotTestLabel, Mode=OneWay}">
+                            <Button
+                            HorizontalAlignment="Right"
+                            Command="{x:Bind ViewModel.CaptureCommand}"
+                            Content="{x:Bind ViewModel.Lang.ScreenshotTestButton, Mode=OneWay}" />
+                        </controls:SettingsCard>
+                        <InfoBar
+                            Severity="{x:Bind ViewModel.StatusSeverity, Mode=OneWay}"
+                            IsOpen="{x:Bind ViewModel.HasStatusMessage, Mode=OneWay}"
+                            IsClosable="False"
+                            Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+            </StackPanel>
+
+            <StackPanel Spacing="12">
+                <TextBlock
+                    Text="{x:Bind ViewModel.Lang.ScreenshotConfig, Mode=OneWay}"
+                    Style="{StaticResource BodyStrongTextBlockStyle}" />
+ 
+                <controls:SettingsCard
+                    IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
+                    Header="{x:Bind ViewModel.Lang.ScreenshotDisplay, Mode=OneWay}"
+                    Description="{x:Bind ViewModel.Lang.ScreenshotDisplayDescription, Mode=OneWay}">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <ComboBox
+                            ItemsSource="{x:Bind ViewModel.Displays}"
+                            SelectedItem="{x:Bind ViewModel.SelectedDisplay, Mode=TwoWay}"
+                            DisplayMemberPath="DisplayText"
+                            MinWidth="240"
+                            HorizontalAlignment="Stretch" />
+                        <Button
+                            Grid.Column="1"
+                            Content="{x:Bind ViewModel.Lang.ScreenshotDisplayIdentify, Mode=OneWay}"
+                            Command="{x:Bind ViewModel.IdentifyDisplayCommand}" />
+                    </Grid>
+                </controls:SettingsCard>
+
+                <controls:SettingsExpander
+                    IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
+                    Header="{x:Bind ViewModel.Lang.ScreenshotSavePath, Mode=OneWay}">
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" MinWidth="320">
+                        <TextBox
+                            x:Name="SavePathBox"
+                            Text="{x:Bind ViewModel.SavePath, Mode=TwoWay}"
+                            KeyDown="OnSavePathKeyDown" />
+                        <Button
+                            Grid.Column="1"
+                            Command="{x:Bind ViewModel.PickFolderCommand}"
+                            Content="{x:Bind ViewModel.Lang.Browse, Mode=OneWay}" />
+                    </Grid>
+
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Header="{x:Bind ViewModel.Lang.ScreenshotResetPathHeader, Mode=OneWay}">
+                            <Button
+                                HorizontalAlignment="Right"
+                                Command="{x:Bind ViewModel.ResetPathCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE72C;" FontSize="12" />
+                                    <TextBlock Text="{x:Bind ViewModel.Lang.ScreenshotResetPath, Mode=OneWay}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+
+                <StackPanel Spacing="0">
+                    <controls:SettingsExpander
+                        IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
+                        Header="{x:Bind ViewModel.Lang.ScreenshotShortcut, Mode=OneWay}">
+
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8">
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.ShortcutKeyNames, Mode=OneWay}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="4" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <keycap:KeyCap KeyText="{Binding}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button
+                                Grid.Column="1"
+                                Content="{x:Bind ViewModel.Lang.ScreenshotShortcutModify, Mode=OneWay}"
+                                Click="OnModifyShortcut" />
+                        </Grid>
+
+                        <controls:SettingsExpander.Items>
+                            <controls:SettingsCard Header="{x:Bind ViewModel.Lang.ScreenshotShortcutReset, Mode=OneWay}">
+                                <Button
+                                    HorizontalAlignment="Right"
+                                    Click="OnResetShortcut">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE72C;" FontSize="12" />
+                                        <TextBlock Text="{x:Bind ViewModel.Lang.ScreenshotShortcutResetButton, Mode=OneWay}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </controls:SettingsCard>
+                        </controls:SettingsExpander.Items>
+                    </controls:SettingsExpander>
+
+                    <InfoBar
+                        Severity="Error"
+                        Title="{x:Bind ViewModel.Lang.ShortcutConflictTitle, Mode=OneWay}"
+                        IsClosable="False"
+                        IsOpen="{x:Bind ViewModel.ShortcutHasConflict, Mode=OneWay}"
+                        Message="{x:Bind ViewModel.ShortcutConflictMessage, Mode=OneWay}" />
+                    <InfoBar
+                        Severity="Warning"
+                        IsClosable="False"
+                        IsOpen="{x:Bind ViewModel.ShortcutUnconventionalVisible, Mode=OneWay}"
+                        Message="{x:Bind ViewModel.ShortcutUnconventionalMessage, Mode=OneWay}" />
+                </StackPanel>
+
+                <StackPanel Spacing="0">
+                    <controls:SettingsCard
+                        IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
+                        Header="{x:Bind ViewModel.Lang.ScreenshotNotificationMode, Mode=OneWay}">
+                        <ComboBox
+                            SelectedIndex="{x:Bind ViewModel.NotificationModeIndex, Mode=TwoWay}"
+                            MinWidth="140"
+                            HorizontalAlignment="Right">
+                            <ComboBoxItem Content="{x:Bind ViewModel.Lang.ScreenshotNotificationNone, Mode=OneWay}" />
+                            <ComboBoxItem Content="{x:Bind ViewModel.Lang.ScreenshotNotificationText, Mode=OneWay}" />
+                            <ComboBoxItem Content="{x:Bind ViewModel.Lang.ScreenshotNotificationPreview, Mode=OneWay}" />
+                        </ComboBox>
+                    </controls:SettingsCard>
+                    <InfoBar
+                        Severity="Informational"
+                        IsClosable="False"
+                        IsOpen="{x:Bind ViewModel.HasNotificationHint, Mode=OneWay}"
+                        Message="{x:Bind ViewModel.Lang.ScreenshotNotificationSystemHint, Mode=OneWay}" />
+                </StackPanel>
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
 </Page>
