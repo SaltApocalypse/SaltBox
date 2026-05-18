@@ -1,13 +1,16 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
 using Serilog;
+using Windows.Management.Deployment;
 using Windows.Storage;
 using SaltBox.Services;
 using SaltBox.ViewModels;
 using SaltBox.Views;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Velopack;
 
 namespace SaltBox;
 
@@ -19,13 +22,67 @@ public partial class App : Application
 
     static App()
     {
+        VelopackApp.Build()
+            .OnFirstRun(_ =>
+            {
+                Log.Information("First run after install");
+                RegisterIdentityPackage();
+            })
+            .Run();
         InitLogging();
         _singleInstanceMutex = new Mutex(true, "SaltBox-SingleInstance", out _isFirstInstance);
     }
 
+    private static void RegisterIdentityPackage()
+    {
+        try
+        {
+            var msixName = "SaltBox.Identity.msix";
+            var msixPath = Path.Combine(AppContext.BaseDirectory, msixName);
+            if (!File.Exists(msixPath))
+            {
+                Log.Warning("Identity package not found: {Path}", msixPath);
+                return;
+            }
+
+            var pm = new PackageManager();
+            var options = new AddPackageOptions
+            {
+                ExternalLocationUri = new Uri(AppContext.BaseDirectory)
+            };
+
+            var result = pm.AddPackageByUriAsync(new Uri(msixPath), options).GetAwaiter().GetResult();
+            if (result.ExtendedErrorCode is { } ex)
+            {
+                Log.Error("Identity package registration failed: 0x{Code:X8} — {Error}",
+                    ex.HResult, result.ErrorText);
+            }
+            else
+            {
+                Log.Information("Identity package registered successfully");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Identity package registration skipped: {Message}", ex.Message);
+        }
+    }
+
+    private static string GetLogDirectory()
+    {
+        try
+        {
+            return Path.Combine(ApplicationData.Current.LocalFolder.Path, "Logs");
+        }
+        catch
+        {
+            return Path.Combine(Path.GetTempPath(), "SaltBox", "Logs");
+        }
+    }
+
     private static void InitLogging()
     {
-        var logDir = Path.Combine(ApplicationData.Current.LocalFolder.Path, "Logs");
+        var logDir = GetLogDirectory();
         var logPath = Path.Combine(logDir, "log-.txt");
 
         Log.Logger = new LoggerConfiguration()
@@ -57,6 +114,7 @@ public partial class App : Application
                 services.AddSingleton<ShortcutRegistry>();
                 services.AddSingleton<ScreenshotService>();
                 services.AddSingleton<TrayService>();
+                services.AddSingleton<UpdateService>();
                 services.AddSingleton<MainWindow>();
                 services.AddSingleton<MainViewModel>();
                 services.AddTransient<HomeViewModel>();
@@ -80,6 +138,14 @@ public partial class App : Application
 
         var log = _host.Services.GetRequiredService<LogService>();
         log.Info("SaltBox launched");
+
+        var config = _host.Services.GetRequiredService<IConfiguration>();
+        var updateSection = config.GetSection("Update");
+        if (!string.IsNullOrEmpty(updateSection["Type"]))
+        {
+            var updater = _host.Services.GetRequiredService<UpdateService>();
+            updater.ConfigureFromConfig(config);
+        }
 
         var window = _host.Services.GetRequiredService<MainWindow>();
         window.Activate();

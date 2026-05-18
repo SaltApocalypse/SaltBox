@@ -32,7 +32,7 @@ public class TrayService
     private nint _trayHwnd;
     private nint _hIcon;
     private NOTIFYICONDATA _nid;
-    private WndProcDelegate _trayWndProc;
+    private WndProcDelegate _trayWndProc = null!;
     private bool _disposed;
 
     private delegate nint WndProcDelegate(nint hWnd, uint msg, nint wParam, nint lParam);
@@ -223,31 +223,63 @@ public class TrayService
 
     private nint LoadTrayIcon()
     {
-        var icoName = "SaltBoxTray.ico";
-        var icoPath = Path.Combine(ApplicationData.Current.TemporaryFolder.Path, icoName);
-
-        if (!File.Exists(icoPath))
+        try
         {
-            try
+            var icoName = "SaltBoxTray.ico";
+            var icoPath = Path.Combine(ApplicationData.Current.TemporaryFolder.Path, icoName);
+
+            if (!File.Exists(icoPath))
             {
-                var pngPath = Path.Combine(Package.Current.InstalledLocation.Path, "Images", "StoreLogo.png");
-                if (File.Exists(pngPath))
-                    CreateIcoFromPng(File.ReadAllBytes(pngPath), icoPath);
+                try
+                {
+                    var pngPath = FindPngPath();
+                    if (pngPath != null && File.Exists(pngPath))
+                        CreateIcoFromPng(File.ReadAllBytes(pngPath), icoPath);
+                }
+                catch (Exception ex)
+                {
+                    _log.Warn($"TrayService: icon creation failed: {ex.Message}");
+                }
             }
-            catch (Exception ex)
+
+            if (File.Exists(icoPath))
             {
-                _log.Warn($"TrayService: icon creation failed: {ex.Message}");
+                var icon = LoadImage(IntPtr.Zero, icoPath, IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
+                if (icon != IntPtr.Zero)
+                    return icon;
             }
         }
-
-        if (File.Exists(icoPath))
+        catch (Exception ex)
         {
-            var icon = LoadImage(IntPtr.Zero, icoPath, IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
-            if (icon != IntPtr.Zero)
-                return icon;
+            _log.Warn($"TrayService: icon load failed (no package identity): {ex.Message}");
         }
 
         return IntPtr.Zero;
+    }
+
+    private static string? FindPngPath()
+    {
+        var candidates = new[]
+        {
+            // With package identity: Package.Current.InstalledLocation points to app dir
+            TryGetPkgPath(),
+            // Without package identity: use AppContext.BaseDirectory
+            Path.Combine(AppContext.BaseDirectory, "Assets", "StoreLogo.png"),
+        };
+
+        return candidates.FirstOrDefault(File.Exists);
+    }
+
+    private static string? TryGetPkgPath()
+    {
+        try
+        {
+            return Path.Combine(Package.Current.InstalledLocation.Path, "Assets", "StoreLogo.png");
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static void CreateIcoFromPng(byte[] pngData, string outputPath)
@@ -293,7 +325,7 @@ public class TrayService
     private static extern nint CreatePopupMenu();
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    private static extern bool InsertMenu(nint hMenu, uint uPosition, uint uFlags, nint uIDNewItem, string lpNewItem);
+    private static extern bool InsertMenu(nint hMenu, uint uPosition, uint uFlags, nint uIDNewItem, string? lpNewItem);
 
     [DllImport("user32.dll")]
     private static extern nint TrackPopupMenu(nint hMenu, uint uFlags, int x, int y, int nReserved, nint hWnd, nint prcRect);

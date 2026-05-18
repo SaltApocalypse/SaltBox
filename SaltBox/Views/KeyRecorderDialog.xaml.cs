@@ -197,7 +197,7 @@ public sealed partial class KeyRecorderDialog : ContentDialog
             if (_modifiers.Contains(VirtualKey.Control)) mod |= MOD_CONTROL;
             if (_modifiers.Contains(VirtualKey.Menu)) mod |= MOD_ALT;
             if (_modifiers.Contains(VirtualKey.Shift)) mod |= MOD_SHIFT;
-            var (isConflict, isSystem, name) = _registry.CheckConflict(mod, _actionKey.Value);
+            var (isConflict, isSystem, name) = _registry.CheckConflict(mod, _actionKey!.Value);
             hasConflict = isConflict;
             if (isConflict)
             {

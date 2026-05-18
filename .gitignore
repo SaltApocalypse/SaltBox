@@ -19,16 +19,15 @@ obj/
 *~
 
 ## WinUI / MSIX
-SaltBox (Package)/Bin/
-SaltBox (Package)/obj/
 *.appx
 *.msix
 *.appxbundle
 *.msixbundle
+IdentityPackage/output/
 
 ## Build results
 [Dd]ebug/
-[Rr]elease/
+[Rr]eleases/
 x64/
 x86/
 ARM64/
@@ -41,3 +40,6 @@ SaltBox/Logs/
 ## OS
 .DS_Store
 Thumbs.db
+
+## Dev
+Dev.md

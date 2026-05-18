@@ -185,7 +185,8 @@ public class ScreenshotService
         if (!_hotkeyRegistered) return;
 
         var hwnd = WindowNative.GetWindowHandle(_mainWindow);
-        RemoveWindowSubclass(hwnd, _subclassDelegate, (IntPtr)HOTKEY_ID);
+        if (_subclassDelegate is not null)
+            RemoveWindowSubclass(hwnd, _subclassDelegate, (IntPtr)HOTKEY_ID);
         UnregisterHotKey(hwnd, HOTKEY_ID);
         _subclassHandle.Free();
         _subclassDelegate = null;

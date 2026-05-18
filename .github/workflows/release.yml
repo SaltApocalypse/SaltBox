@@ -1,0 +1,52 @@
+name: Build and Release
+on:
+  push:
+    tags:
+      - "v*"
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install vpk
+        run: dotnet tool install -g vpk
+      - name: Get version from tag
+        id: version
+        run: |
+          $version = "${{ github.ref_name }}" -replace "^v", ""
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+      - name: Publish
+        run: |
+          dotnet publish SaltBox/SaltBox.csproj `
+            -c Release -r win-x64 --self-contained `
+            -o ./publish
+      - name: Build and sign identity package
+        shell: pwsh
+        run: |
+          # Generate self-signed cert for identity package signing
+          $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=SaltBox Identity" -KeyUsage DigitalSignature -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
+          $pfxPath = "${{ runner.temp }}\identity.pfx"
+          $secPw = ConvertTo-SecureString -String "saltbox" -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert.Name -FilePath $pfxPath -Password $secPw | Out-Null
+          & ".\IdentityPackage\BuildIdentityPackage.cmd" $pfxPath "saltbox" "${{ github.workspace }}\publish"
+      - name: Create Velopack release
+        run: |
+          vpk pack --packId SaltBox `
+            --packVersion ${{ steps.version.outputs.version }} `
+            --packDir ./publish `
+            --mainExe SaltBox.exe
+      - name: Upload to GitHub Releases
+        run: |
+          vpk upload github `
+            --repoUrl https://github.com/${{ github.repository }} `
+            --token ${{ secrets.GITHUB_TOKEN }} `
+            --publish `
+            --releaseName "SaltBox ${{ steps.version.outputs.version }}" `
+            --tag ${{ github.ref_name }}

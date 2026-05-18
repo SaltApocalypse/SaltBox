@@ -30,16 +30,30 @@ public class ThemeService
 
     private static ElementTheme LoadTheme()
     {
-        var settings = ApplicationData.Current.LocalSettings;
-        if (settings.Values.TryGetValue(SettingsKey, out var value) && value is string str)
-            return Enum.TryParse<ElementTheme>(str, out var theme) ? theme : ElementTheme.Default;
+        try
+        {
+            var settings = ApplicationData.Current.LocalSettings;
+            if (settings.Values.TryGetValue(SettingsKey, out var value) && value is string str)
+                return Enum.TryParse<ElementTheme>(str, out var theme) ? theme : ElementTheme.Default;
+        }
+        catch
+        {
+            // No package identity (dev without sparse package) — use default
+        }
 
         return ElementTheme.Default;
     }
 
     private static void SaveTheme(ElementTheme theme)
     {
-        var settings = ApplicationData.Current.LocalSettings;
-        settings.Values[SettingsKey] = theme.ToString();
+        try
+        {
+            var settings = ApplicationData.Current.LocalSettings;
+            settings.Values[SettingsKey] = theme.ToString();
+        }
+        catch
+        {
+            // No package identity — silently ignore
+        }
     }
 }

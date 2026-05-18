@@ -45,18 +45,25 @@ Current project layout:
 SaltBox/
 ├── SaltBox.slnx
 ├── Agent.md
-├── SaltBox/                         # Main WinUI 3 project
+├── IdentityPackage/                 # Sparse package for package identity
+│   ├── AppxManifest.xml
+│   └── BuildIdentityPackage.cmd
+├── SaltBox/                         # Main WinUI 3 project (unpackaged)
 │   ├── SaltBox.csproj
-│   ├── App.xaml / .cs               # DI host + Serilog setup
+│   ├── App.xaml / .cs               # DI host + Serilog + Velopack setup
 │   ├── MainWindow.xaml / .cs        # NavigationView shell
-│   ├── app.manifest
+│   ├── app.manifest                 # Contains msix element for identity binding
 │   ├── Views/                       # Pages (HomePage, SettingsPage, ScreenshotPage, ...)
 │   ├── ViewModels/                  # MVVM ViewModels
 │   ├── Services/                    # Application services
 │   │   ├── LogService.cs
 │   │   ├── ToolRegistry.cs
 │   │   ├── ThemeService.cs
-│   │   └── CultureService.cs
+│   │   ├── CultureService.cs
+│   │   ├── TrayService.cs
+│   │   ├── UpdateService.cs
+│   │   ├── ScreenshotService.cs
+│   │   └── ...
 │   ├── Contracts/
 │   │   └── IToolModule.cs
 │   ├── Models/
@@ -67,7 +74,6 @@ SaltBox/
 │   │   └── appsettings.json
 │   ├── Assets/
 │   └── Logs/
-└── SaltBox (Package)/               # MSIX packaging project (.wapproj)
 ```
 
 # Module Structure
@@ -168,22 +174,44 @@ public sealed partial class HomePage : Page
 - Call `AppNotificationManager.Default.Register()` in `MainWindow.OnLoaded()` under try-catch.
 - Set `SetScenario(AppNotificationScenario.Urgent)` to bypass Focus Assist silently (no sound).
 - For preview images, use `SetAppLogoOverride(Uri)` — `AddInlineImage` is not available in Windows App SDK 2.0.1.
-- The Package.appxmanifest must include both `windows.toastNotificationActivation` and `windows.comServer` extensions with a matching `ToastActivatorCLSID`.
+- Notifications depend on package identity (provided by sparse package `IdentityPackage/`).
 - Notifications are sent from two paths:
   - Hotkey: `ScreenshotService.TrySendNotification()` (singleton service, always alive).
   - Button: `ScreenshotViewModel.SendNotification()` (transient ViewModel).
 - Add an `InfoBar` in the settings page to remind users to enable system notifications when notification mode is not `None`.
-- For self-contained MSIX apps, the Singleton runtime package must be included as an MSIX dependency (already done via `Microsoft.WindowsAppSDK` in `.wapproj`).
 
 # Logging Rules
 
 Use Serilog only.
 
 - All errors and important operations must be logged.
-- Log path: `{ApplicationData.Current.LocalFolder.Path}/Logs/` (i.e. `%LOCALAPPDATA%\Packages\{PackageFamilyName}\LocalState\Logs\`).
+- Log path: `{ApplicationData.Current.LocalFolder.Path}/Logs/` (i.e. `%LOCALAPPDATA%\SaltBox\SaltBox\LocalState\Logs\` when sparse package registered).
+- Fallback path (dev without sparse package): `%TEMP%\SaltBox\Logs\`.
 - Filename format: `log-yyyyMMdd.txt`.
 - Rolling interval: daily, 30 days retention.
 - Serilog is initialized in `App` static constructor before the DI host is built.
+
+# Velopack Update Rules
+
+- Add `VelopackApp.Build().Run()` in `App` static constructor before anything else.
+- `UpdateService` (singleton) wraps `UpdateManager` for check/download/apply flows.
+- Update source URL is configurable via `appsettings.json` → `Update:Url`.
+- If no URL is configured, the check button shows "Update source not configured".
+- Settings page shows a `SettingsExpander` section with Check/Download/Install buttons based on `UpdateStatus`.
+- Use `Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)` for settings storage (fallback when sparse package not registered).
+- The `vpk` CLI tool is required for packaging: `dotnet tool install -g vpk`.
+- Package command: `vpk pack --packId SaltBox --packVersion <version> --packDir <publish> --mainExe SaltBox.exe`.
+
+# Sparse Package (Identity Package) Rules
+
+- Identity package (`SaltBox.Identity.msix`) provides package identity for notifications (`AppNotificationManager`), `Package.Current`, and `ApplicationData.Current`.
+- Built by `IdentityPackage/BuildIdentityPackage.cmd` using `MakeAppx.exe` + optional `SignTool.exe`.
+- Must be signed for production (self-signed cert works if installed to Trusted People store on target machine).
+- Must be present next to `SaltBox.exe` in the publish directory.
+- The `.csproj` includes it via a conditional `<Content>` reference; CI builds it and copies to `./publish` before `vpk pack`.
+- On first run after install, `App.xaml.cs` `RegisterIdentityPackage()` calls `PackageManager.AddPackageByUriAsync()` with `ExternalLocationUri` set to `AppContext.BaseDirectory`.
+- Registry fallback (`%TEMP%`) is used when no package identity is detected (try-catch around all `ApplicationData.Current` calls).
+- GitHub Actions workflow (`release.yml`) generates a self-signed cert in CI, signs the identity package, and copies it to publish directory.
 
 # UI Rules
 

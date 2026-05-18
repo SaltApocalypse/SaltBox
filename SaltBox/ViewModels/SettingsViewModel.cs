@@ -1,7 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using SaltBox.Services;
-using Windows.ApplicationModel;
+using System.Reflection;
 
 namespace SaltBox.ViewModels;
 
@@ -11,12 +13,21 @@ public partial class SettingsViewModel : ObservableObject
 {
     private readonly ThemeService _themeService;
     private readonly CultureService _culture;
+    private readonly UpdateService _updateService;
+    private bool _hasChecked;
 
-    public SettingsViewModel(ThemeService themeService, CultureService culture)
+    public SettingsViewModel(ThemeService themeService, CultureService culture, UpdateService updateService)
     {
         _themeService = themeService;
         _culture = culture;
+        _updateService = updateService;
         Lang = culture;
+
+        _updateService.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(UpdateService.Status) or nameof(UpdateService.LatestVersion))
+                OnUpdateStatusChanged();
+        };
 
         SelectedThemeIndex = _themeService.CurrentTheme switch
         {
@@ -36,8 +47,16 @@ public partial class SettingsViewModel : ObservableObject
     {
         get
         {
-            var v = Package.Current.Id.Version;
-            return $"{v.Major}.{v.Minor}.{v.Build}";
+            try
+            {
+                var v = Windows.ApplicationModel.Package.Current.Id.Version;
+                return $"v{v.Major}.{v.Minor}.{v.Build}";
+            }
+            catch
+            {
+                var v = Assembly.GetEntryAssembly()?.GetName()?.Version;
+                return v is not null ? $"v{v.Major}.{v.Minor}.{v.Build}" : "v0.1.0";
+            }
         }
     }
 
@@ -46,6 +65,65 @@ public partial class SettingsViewModel : ObservableObject
         new LanguageOption("en-US", "English"),
         new LanguageOption("zh-CN", "中文 (简体)")
     };
+
+    public UpdateService Updater => _updateService;
+
+    public string UpdateStatusDescription
+    {
+        get
+        {
+            if (!_hasChecked)
+                return "";
+            return _updateService.Status switch
+            {
+                UpdateStatus.UpToDate => Lang.SettingsUpdateUpToDate,
+                UpdateStatus.Available => string.Format(Lang.SettingsUpdateAvailable, _updateService.LatestVersion),
+                UpdateStatus.ReadyToInstall => string.Format(Lang.SettingsUpdateAvailable, _updateService.LatestVersion),
+                _ => ""
+            };
+        }
+    }
+
+    public string UpdateInfoBarMessage
+    {
+        get
+        {
+            if (!_hasChecked)
+                return "";
+            return _updateService.Status switch
+            {
+                UpdateStatus.Checking => Lang.SettingsUpdateChecking,
+                UpdateStatus.UpToDate => Lang.SettingsUpdateUpToDate,
+                UpdateStatus.Available => string.Format(Lang.SettingsUpdateAvailable, _updateService.LatestVersion),
+                UpdateStatus.Downloading => Lang.SettingsUpdateDownloading,
+                UpdateStatus.ReadyToInstall => Lang.SettingsUpdateInstall,
+                UpdateStatus.Error => _updateService.StatusMessage,
+                _ => ""
+            };
+        }
+    }
+
+    public InfoBarSeverity UpdateInfoBarSeverity
+    {
+        get
+        {
+            if (!_hasChecked)
+                return InfoBarSeverity.Informational;
+            return _updateService.Status switch
+            {
+                UpdateStatus.UpToDate => InfoBarSeverity.Success,
+                UpdateStatus.Available => InfoBarSeverity.Informational,
+                UpdateStatus.ReadyToInstall => InfoBarSeverity.Informational,
+                UpdateStatus.Error => InfoBarSeverity.Error,
+                _ => InfoBarSeverity.Informational
+            };
+        }
+    }
+
+    public bool ShowUpdateInfoBar => _hasChecked;
+    public Visibility ShowUpdateActionButton => _updateService.Status is UpdateStatus.Available or UpdateStatus.ReadyToInstall ? Visibility.Visible : Visibility.Collapsed;
+    public bool CanCheckUpdate => _updateService.CanCheck;
+    public bool IsChecking => _updateService.Status == UpdateStatus.Checking;
 
     [ObservableProperty]
     private int _selectedThemeIndex;
@@ -71,5 +149,41 @@ public partial class SettingsViewModel : ObservableObject
         {
             _culture.SetCulture(value.Code);
         }
+    }
+
+    private void OnUpdateStatusChanged()
+    {
+        OnPropertyChanged(nameof(UpdateStatusDescription));
+        OnPropertyChanged(nameof(UpdateInfoBarMessage));
+        OnPropertyChanged(nameof(UpdateInfoBarSeverity));
+        OnPropertyChanged(nameof(ShowUpdateInfoBar));
+        OnPropertyChanged(nameof(ShowUpdateActionButton));
+        OnPropertyChanged(nameof(CanCheckUpdate));
+        OnPropertyChanged(nameof(IsChecking));
+    }
+
+    [RelayCommand]
+    private async Task CheckForUpdates()
+    {
+        if (!_updateService.CanCheck)
+            return;
+        _hasChecked = true;
+        OnUpdateStatusChanged();
+        await _updateService.CheckForUpdatesAsync();
+    }
+
+    [RelayCommand]
+    private async Task DownloadAndInstall()
+    {
+        if (_updateService.Status == UpdateStatus.ReadyToInstall)
+        {
+            _updateService.ApplyAndRestart();
+            return;
+        }
+
+        if (_updateService.Status != UpdateStatus.Available)
+            return;
+
+        await _updateService.DownloadUpdateAsync();
     }
 }
