@@ -13,7 +13,7 @@
   <Identity
     Name="b18c8f77-76a7-4611-81e9-ecd0b62ad7da"
     Publisher="CN=SaltA"
-    Version="1.0.0.0" />
+    Version="0.1.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="b18c8f77-76a7-4611-81e9-ecd0b62ad7da" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

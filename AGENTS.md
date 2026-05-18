@@ -1,5 +1,7 @@
 You are assisting in the development of a Windows desktop application project named SaltBox.
 
+IMPORTANT: Use Chinese when communicating with the user. All responses, explanations, and discussions must be in Chinese.
+
 # Project Overview
 
 SaltBox is a personal Windows toolbox application built with WinUI 3 and .NET 8.
@@ -157,12 +159,28 @@ public sealed partial class HomePage : Page
 <TextBlock Text="{x:Bind ViewModel.Lang.HomeTitle, Mode=OneWay}" />
 ```
 
+# Notification Rules
+
+- Use `Microsoft.Windows.AppNotifications.AppNotificationManager` + `AppNotificationBuilder`.
+- Three modes: `None` (silent), `Text` (toast with status), `Preview` (toast + thumbnail).
+- Notification mode is persisted in `ApplicationData.LocalSettings["ScreenshotNotificationMode"]`.
+- Always call `AppNotificationManager.IsSupported()` before `Register()` or `Show()`.
+- Call `AppNotificationManager.Default.Register()` in `MainWindow.OnLoaded()` under try-catch.
+- Set `SetScenario(AppNotificationScenario.Urgent)` to bypass Focus Assist silently (no sound).
+- For preview images, use `SetAppLogoOverride(Uri)` — `AddInlineImage` is not available in Windows App SDK 2.0.1.
+- The Package.appxmanifest must include both `windows.toastNotificationActivation` and `windows.comServer` extensions with a matching `ToastActivatorCLSID`.
+- Notifications are sent from two paths:
+  - Hotkey: `ScreenshotService.TrySendNotification()` (singleton service, always alive).
+  - Button: `ScreenshotViewModel.SendNotification()` (transient ViewModel).
+- Add an `InfoBar` in the settings page to remind users to enable system notifications when notification mode is not `None`.
+- For self-contained MSIX apps, the Singleton runtime package must be included as an MSIX dependency (already done via `Microsoft.WindowsAppSDK` in `.wapproj`).
+
 # Logging Rules
 
 Use Serilog only.
 
 - All errors and important operations must be logged.
-- Log path: `Logs/` (relative to app base directory).
+- Log path: `{ApplicationData.Current.LocalFolder.Path}/Logs/` (i.e. `%LOCALAPPDATA%\Packages\{PackageFamilyName}\LocalState\Logs\`).
 - Filename format: `log-yyyyMMdd.txt`.
 - Rolling interval: daily, 30 days retention.
 - Serilog is initialized in `App` static constructor before the DI host is built.

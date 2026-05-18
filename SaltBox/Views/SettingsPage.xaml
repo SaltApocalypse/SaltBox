@@ -33,6 +33,10 @@
                     HorizontalAlignment="Right" />
             </controls:SettingsCard>
 
+            <controls:SettingsCard
+                Header="{x:Bind ViewModel.Lang.SettingsAppVersion, Mode=OneWay}"
+                Description="{x:Bind ViewModel.AppVersion, Mode=OneWay}" />
+
         </StackPanel>
     </ScrollViewer>
 </Page>

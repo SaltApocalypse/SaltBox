@@ -22,8 +22,8 @@ public partial class CultureService : ObservableObject
             ["SettingsThemeDark"] = "Dark",
             ["SettingsThemeLight"] = "Light",
             ["SettingsLanguage"] = "Language",
-            ["SettingsThemeDescription"] = "Choose app theme",
             ["SettingsLanguageDescription"] = "Choose display language",
+            ["SettingsAppVersion"] = "Software version",
             ["ScreenshotDescription"] = "Global screenshot tool, triggered by shortcut key.",
             ["ScreenshotEnable"] = "Enable screenshot",
             ["ScreenshotEnableDescription"] = "Enable or disable the screenshot feature",
@@ -40,6 +40,8 @@ public partial class CultureService : ObservableObject
             ["ScreenshotStatusSaved"] = "Saved:",
             ["ScreenshotStatusFailed"] = "Capture failed",
             ["ScreenshotStatusPathReset"] = "Save path reset to default",
+            ["ScreenshotOpenPath"] = "Open save path",
+            ["ScreenshotOpenPathButton"] = "Open folder",
             ["ScreenshotResetPath"] = "Reset",
             ["ScreenshotResetPathHeader"] = "Reset to default path",
             ["ScreenshotCurrentPath"] = "Current path",
@@ -85,8 +87,8 @@ public partial class CultureService : ObservableObject
             ["SettingsThemeDark"] = "夜间",
             ["SettingsThemeLight"] = "日间",
             ["SettingsLanguage"] = "语言",
-            ["SettingsThemeDescription"] = "选择应用主题",
             ["SettingsLanguageDescription"] = "选择显示语言",
+            ["SettingsAppVersion"] = "软件版本",
             ["ScreenshotDescription"] = "全局的截图工具，使用快捷键触发。",
             ["ScreenshotEnable"] = "启用屏幕截图",
             ["ScreenshotEnableDescription"] = "启用或禁用屏幕截图功能",
@@ -103,6 +105,8 @@ public partial class CultureService : ObservableObject
             ["ScreenshotStatusSaved"] = "已保存:",
             ["ScreenshotStatusFailed"] = "截图失败",
             ["ScreenshotStatusPathReset"] = "保存路径已重置为默认",
+            ["ScreenshotOpenPath"] = "打开截图保存路径",
+            ["ScreenshotOpenPathButton"] = "打开文件夹",
             ["ScreenshotResetPath"] = "重置",
             ["ScreenshotResetPathHeader"] = "恢复默认路径",
             ["ScreenshotCurrentPath"] = "当前路径",
@@ -175,6 +179,7 @@ public partial class CultureService : ObservableObject
     public string SettingsLanguage => _strings.GetValueOrDefault(nameof(SettingsLanguage), "Language");
     public string SettingsThemeDescription => _strings.GetValueOrDefault(nameof(SettingsThemeDescription), "Choose app theme");
     public string SettingsLanguageDescription => _strings.GetValueOrDefault(nameof(SettingsLanguageDescription), "Choose display language");
+    public string SettingsAppVersion => _strings.GetValueOrDefault(nameof(SettingsAppVersion), "Software version");
     public string ScreenshotDescription => _strings.GetValueOrDefault(nameof(ScreenshotDescription), "Global screenshot tool, triggered by shortcut key.");
     public string ScreenshotEnable => _strings.GetValueOrDefault(nameof(ScreenshotEnable), "Enable screenshot");
     public string ScreenshotEnableDescription => _strings.GetValueOrDefault(nameof(ScreenshotEnableDescription), "Enable or disable the screenshot feature");
@@ -194,6 +199,8 @@ public partial class CultureService : ObservableObject
     public string ScreenshotStatusPathReset => _strings.GetValueOrDefault(nameof(ScreenshotStatusPathReset), "Save path reset to default");
     public string ScreenshotResetPath => _strings.GetValueOrDefault(nameof(ScreenshotResetPath), "Reset");
     public string ScreenshotResetPathHeader => _strings.GetValueOrDefault(nameof(ScreenshotResetPathHeader), "Reset to default path");
+    public string ScreenshotOpenPath => _strings.GetValueOrDefault(nameof(ScreenshotOpenPath), "Open save path");
+    public string ScreenshotOpenPathButton => _strings.GetValueOrDefault(nameof(ScreenshotOpenPathButton), "Open folder");
     public string ScreenshotCurrentPath => _strings.GetValueOrDefault(nameof(ScreenshotCurrentPath), "Current path");
     public string ScreenshotDisplaySelect => _strings.GetValueOrDefault(nameof(ScreenshotDisplaySelect), "Select a display");
     public string ScreenshotDisplayIdentify => _strings.GetValueOrDefault(nameof(ScreenshotDisplayIdentify), "Identify");

@@ -56,6 +56,7 @@ public partial class App : Application
                 services.AddSingleton<ThemeService>();
                 services.AddSingleton<ShortcutRegistry>();
                 services.AddSingleton<ScreenshotService>();
+                services.AddSingleton<TrayService>();
                 services.AddSingleton<MainWindow>();
                 services.AddSingleton<MainViewModel>();
                 services.AddTransient<HomeViewModel>();

@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.AppNotifications;
 using SaltBox.Services;
 using SaltBox.Views;
+using System.Runtime.InteropServices;
 
 namespace SaltBox;
 
@@ -15,6 +16,7 @@ public sealed partial class MainWindow : Window
     private readonly ThemeService _theme;
     private readonly AppWindow _appWindow;
     private ScreenshotService? _screenshot;
+    private TrayService? _tray;
     private string? _currentTag;
 
     public CultureService Lang { get; }
@@ -74,6 +76,9 @@ public sealed partial class MainWindow : Window
         _screenshot.RegisterGlobalHotkey();
         Closed += (_, _) => _screenshot.UnregisterGlobalHotkey();
 
+        _tray = _services.GetRequiredService<TrayService>();
+        _tray.Initialize();
+
         NavView.SelectedItem = NavView.MenuItems[0];
         NavigateTo("Home");
         _log.Info("MainWindow loaded");
@@ -99,6 +104,23 @@ public sealed partial class MainWindow : Window
 
         _currentTag = tag;
         NavigateInternal(tag);
+    }
+
+    public void NavigateToSettings()
+    {
+        if (_currentTag == "Settings")
+            return;
+
+        _currentTag = "Settings";
+        NavigateInternal("Settings");
+        ShowWindowFromTray();
+    }
+
+    private void ShowWindowFromTray()
+    {
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        _ = ShowWindow(hwnd, 5);
+        _ = SetForegroundWindow(hwnd);
     }
 
     private void NavigateInternal(string tag)
@@ -133,4 +155,10 @@ public sealed partial class MainWindow : Window
 
         _log.Info($"Navigated to {tag}");
     }
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(nint hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(nint hWnd);
 }

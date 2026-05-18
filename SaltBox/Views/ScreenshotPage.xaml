@@ -89,6 +89,12 @@
                     </Grid>
 
                     <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Header="{x:Bind ViewModel.Lang.ScreenshotOpenPath, Mode=OneWay}">
+                            <Button
+                                HorizontalAlignment="Right"
+                                Command="{x:Bind ViewModel.OpenSaveFolderCommand}"
+                                Content="{x:Bind ViewModel.Lang.ScreenshotOpenPathButton, Mode=OneWay}" />
+                        </controls:SettingsCard>
                         <controls:SettingsCard Header="{x:Bind ViewModel.Lang.ScreenshotResetPathHeader, Mode=OneWay}">
                             <Button
                                 HorizontalAlignment="Right"

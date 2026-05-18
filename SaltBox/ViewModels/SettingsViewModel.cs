@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.UI.Xaml;
 using SaltBox.Services;
+using Windows.ApplicationModel;
 
 namespace SaltBox.ViewModels;
 
@@ -30,6 +31,15 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     public CultureService Lang { get; }
+
+    public string AppVersion
+    {
+        get
+        {
+            var v = Package.Current.Id.Version;
+            return $"{v.Major}.{v.Minor}.{v.Build}";
+        }
+    }
 
     public List<LanguageOption> Languages { get; } = new()
     {

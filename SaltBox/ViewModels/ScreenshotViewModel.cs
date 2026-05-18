@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml.Controls;
+using System.Diagnostics;
 using Microsoft.Windows.AppNotifications;
 using Microsoft.Windows.AppNotifications.Builder;
 using SaltBox.Services;
@@ -246,6 +247,19 @@ public partial class ScreenshotViewModel : ObservableObject
         SavePath = GetDefaultScreenshotPath();
         StatusMessage = Lang.ScreenshotStatusPathReset;
         _log.Info("Save path reset to default");
+    }
+
+    [RelayCommand]
+    private void OpenSaveFolder()
+    {
+        try
+        {
+            Process.Start("explorer.exe", SavePath);
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Failed to open save folder: {ex.Message}");
+        }
     }
 
     [RelayCommand]
