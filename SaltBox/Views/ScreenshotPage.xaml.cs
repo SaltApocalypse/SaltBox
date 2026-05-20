@@ -33,6 +33,7 @@ public sealed partial class ScreenshotPage : Page
         var dialog = new KeyRecorderDialog();
         dialog.SetLanguage(ViewModel.Lang);
         dialog.SetShortcutRegistry(_shortcutRegistry);
+        dialog.SetToolName("Screenshot");
         dialog.XamlRoot = XamlRoot;
 
         var result = await dialog.ShowAsync();

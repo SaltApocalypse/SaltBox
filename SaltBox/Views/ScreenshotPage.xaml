@@ -31,23 +31,25 @@
                     HorizontalAlignment="Right" />
                 </controls:SettingsCard>
 
-                <controls:SettingsExpander
-                IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
-                Header="{x:Bind ViewModel.Lang.ScreenshotTest, Mode=OneWay}">
-                    <controls:SettingsExpander.Items>
-                        <controls:SettingsCard Header="{x:Bind ViewModel.Lang.ScreenshotTestLabel, Mode=OneWay}">
-                            <Button
-                            HorizontalAlignment="Right"
-                            Command="{x:Bind ViewModel.CaptureCommand}"
-                            Content="{x:Bind ViewModel.Lang.ScreenshotTestButton, Mode=OneWay}" />
-                        </controls:SettingsCard>
-                        <InfoBar
-                            Severity="{x:Bind ViewModel.StatusSeverity, Mode=OneWay}"
-                            IsOpen="{x:Bind ViewModel.HasStatusMessage, Mode=OneWay}"
-                            IsClosable="False"
-                            Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
-                    </controls:SettingsExpander.Items>
-                </controls:SettingsExpander>
+                <StackPanel Spacing="0">
+                    <controls:SettingsExpander
+                    IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
+                    Header="{x:Bind ViewModel.Lang.ScreenshotTest, Mode=OneWay}">
+                        <controls:SettingsExpander.Items>
+                            <controls:SettingsCard Header="{x:Bind ViewModel.Lang.ScreenshotTestLabel, Mode=OneWay}">
+                                <Button
+                                HorizontalAlignment="Right"
+                                Command="{x:Bind ViewModel.CaptureCommand}"
+                                Content="{x:Bind ViewModel.Lang.ScreenshotTestButton, Mode=OneWay}" />
+                            </controls:SettingsCard>
+                        </controls:SettingsExpander.Items>
+                    </controls:SettingsExpander>
+                    <InfoBar
+                        Severity="{x:Bind ViewModel.StatusSeverity, Mode=OneWay}"
+                        IsOpen="{x:Bind ViewModel.HasStatusMessage, Mode=OneWay}"
+                        IsClosable="False"
+                        Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
+                </StackPanel>
             </StackPanel>
 
             <StackPanel Spacing="12">

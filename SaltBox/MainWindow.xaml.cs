@@ -70,7 +70,7 @@ public sealed partial class MainWindow : Window
         };
 
         if (AppNotificationManager.IsSupported())
-            try { AppNotificationManager.Default.Register(); } catch { }
+            try { AppNotificationManager.Default.Register(); } catch (Exception ex) { _log.Warn($"Notification registration failed: {ex.Message}"); }
 
         _screenshot = _services.GetRequiredService<ScreenshotService>();
         _screenshot.RegisterGlobalHotkey();

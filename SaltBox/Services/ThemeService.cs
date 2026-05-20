@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Serilog;
 using Windows.Storage;
 
 namespace SaltBox.Services;
@@ -36,9 +37,9 @@ public class ThemeService
             if (settings.Values.TryGetValue(SettingsKey, out var value) && value is string str)
                 return Enum.TryParse<ElementTheme>(str, out var theme) ? theme : ElementTheme.Default;
         }
-        catch
+        catch (Exception ex)
         {
-            // No package identity (dev without sparse package) — use default
+            Log.Warning("Failed to load theme: {Message}", ex.Message);
         }
 
         return ElementTheme.Default;
@@ -51,9 +52,9 @@ public class ThemeService
             var settings = ApplicationData.Current.LocalSettings;
             settings.Values[SettingsKey] = theme.ToString();
         }
-        catch
+        catch (Exception ex)
         {
-            // No package identity — silently ignore
+            Log.Warning("Failed to save theme: {Message}", ex.Message);
         }
     }
 }

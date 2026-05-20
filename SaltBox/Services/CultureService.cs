@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Serilog;
 using Windows.Globalization;
 using Windows.Storage;
 
@@ -189,8 +190,9 @@ public partial class CultureService : ObservableObject
             var lang = ApplicationLanguages.Languages.FirstOrDefault() ?? "en-US";
             return lang.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "zh-CN" : "en-US";
         }
-        catch
+        catch (Exception ex)
         {
+            Log.Warning("Failed to detect system culture: {Message}", ex.Message);
             return "en-US";
         }
     }
@@ -295,7 +297,10 @@ public partial class CultureService : ObservableObject
             if (settings.Values.TryGetValue("AppLanguage", out var val) && val is string s)
                 return s;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Log.Warning("Failed to load AppLanguage: {Message}", ex.Message);
+        }
         return null;
     }
 
@@ -305,6 +310,9 @@ public partial class CultureService : ObservableObject
         {
             ApplicationData.Current.LocalSettings.Values["AppLanguage"] = code;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Log.Warning("Failed to save AppLanguage: {Message}", ex.Message);
+        }
     }
 }

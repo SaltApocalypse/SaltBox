@@ -33,34 +33,37 @@
                     HorizontalAlignment="Right" />
             </controls:SettingsCard>
 
-            <controls:SettingsExpander
-                Header="{x:Bind ViewModel.Lang.SettingsCurrentVersion, Mode=OneWay}"
-                Description="{x:Bind ViewModel.AppVersion, Mode=OneWay}"
-                IsExpanded="True">
-                <controls:SettingsExpander.Items>
-                    <controls:SettingsCard
-                        Header="{x:Bind ViewModel.Lang.SettingsUpdateCheck, Mode=OneWay}"
-                        Description="{x:Bind ViewModel.UpdateStatusDescription, Mode=OneWay}">
-                        <Button
-                            Command="{x:Bind ViewModel.CheckForUpdatesCommand}"
-                            Content="{x:Bind ViewModel.Lang.SettingsUpdateCheckManual, Mode=OneWay}"
-                            IsEnabled="{x:Bind ViewModel.CanCheckUpdate, Mode=OneWay}" />
-                    </controls:SettingsCard>
-                    <InfoBar
-                        IsOpen="{x:Bind ViewModel.ShowUpdateInfoBar, Mode=OneWay}"
-                        Severity="{x:Bind ViewModel.UpdateInfoBarSeverity, Mode=OneWay}"
-                        Message="{x:Bind ViewModel.UpdateInfoBarMessage, Mode=OneWay}"
-                        IsClosable="False">
-                        <InfoBar.ActionButton>
+            <StackPanel Spacing="0">
+                <controls:SettingsExpander
+                    Header="{x:Bind ViewModel.Lang.SettingsCurrentVersion, Mode=OneWay}"
+                    Description="{x:Bind ViewModel.AppVersion, Mode=OneWay}"
+                    IsExpanded="False">
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard
+                            Header="{x:Bind ViewModel.Lang.SettingsUpdateCheck, Mode=OneWay}"
+                            Description="{x:Bind ViewModel.UpdateStatusDescription, Mode=OneWay}">
                             <Button
-                                Command="{x:Bind ViewModel.DownloadAndInstallCommand}"
-                                Content="{x:Bind ViewModel.Lang.SettingsUpdateNowButton, Mode=OneWay}"
-                                Visibility="{x:Bind ViewModel.ShowUpdateActionButton, Mode=OneWay}"
-                                Style="{StaticResource AccentButtonStyle}" />
-                        </InfoBar.ActionButton>
-                    </InfoBar>
-                </controls:SettingsExpander.Items>
-            </controls:SettingsExpander>
+                                Command="{x:Bind ViewModel.CheckForUpdatesCommand}"
+                                Content="{x:Bind ViewModel.Lang.SettingsUpdateCheckManual, Mode=OneWay}"
+                                IsEnabled="{x:Bind ViewModel.CanCheckUpdate, Mode=OneWay}" />
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+
+                <InfoBar
+                    IsOpen="{x:Bind ViewModel.ShowUpdateInfoBar, Mode=OneWay}"
+                    Severity="{x:Bind ViewModel.UpdateInfoBarSeverity, Mode=OneWay}"
+                    Message="{x:Bind ViewModel.UpdateInfoBarMessage, Mode=OneWay}"
+                    IsClosable="False">
+                    <InfoBar.ActionButton>
+                        <Button
+                            Command="{x:Bind ViewModel.DownloadAndInstallCommand}"
+                            Content="{x:Bind ViewModel.Lang.SettingsUpdateNowButton, Mode=OneWay}"
+                            Visibility="{x:Bind ViewModel.ShowUpdateActionButton, Mode=OneWay}"
+                            Style="{StaticResource AccentButtonStyle}" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
+            </StackPanel>
 
         </StackPanel>
     </ScrollViewer>

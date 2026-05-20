@@ -19,15 +19,12 @@ public partial class App : Application
     private readonly IHost _host;
     private static readonly Mutex? _singleInstanceMutex;
     private static readonly bool _isFirstInstance;
+    private static bool _isFirstRun;
 
     static App()
     {
         VelopackApp.Build()
-            .OnFirstRun(_ =>
-            {
-                Log.Information("First run after install");
-                RegisterIdentityPackage();
-            })
+            .OnFirstRun(_ => _isFirstRun = true)
             .Run();
         InitLogging();
         _singleInstanceMutex = new Mutex(true, "SaltBox-SingleInstance", out _isFirstInstance);
@@ -138,6 +135,12 @@ public partial class App : Application
 
         var log = _host.Services.GetRequiredService<LogService>();
         log.Info("SaltBox launched");
+
+        if (_isFirstRun)
+        {
+            log.Info("First run after install, registering identity package");
+            _ = Task.Run(() => RegisterIdentityPackage());
+        }
 
         var config = _host.Services.GetRequiredService<IConfiguration>();
         var updateSection = config.GetSection("Update");

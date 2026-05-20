@@ -3,7 +3,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.Win32;
 using Microsoft.Windows.AppNotifications;
 using Microsoft.Windows.AppNotifications.Builder;
-using Microsoft.Windows.Storage.Pickers;
 using Serilog;
 using System.Runtime.InteropServices;
 using Windows.Graphics.Capture;
@@ -12,7 +11,10 @@ using Windows.Graphics.DirectX.Direct3D11;
 using Windows.Graphics.Imaging;
 using Windows.Foundation;
 using Windows.Storage;
+using Windows.Storage.Pickers;
 using WinRT.Interop;
+using SaltBox.ViewModels;
+using SaltBox.Helpers;
 
 namespace SaltBox.Services;
 
@@ -36,11 +38,6 @@ public class ScreenshotService
     private readonly LogService _log;
     private readonly ThemeService _themeService;
 
-    private static Guid GraphicsCaptureItemGuid = new("79C3F95B-31F7-4EC2-A464-632EF5D30760");
-    private static Guid IDXGIDeviceGuid = new("54ec77fa-1377-44e6-8c32-88fd5f44c84c");
-    private readonly List<IntPtr> _identifyHwnds = new();
-    private static readonly WNDPROC _identifyProc = IdentifyWindowProc;
-
     public ScreenshotService(MainWindow mainWindow, LogService log, ThemeService themeService)
     {
         _mainWindow = mainWindow;
@@ -48,83 +45,22 @@ public class ScreenshotService
         _themeService = themeService;
     }
 
-    public List<DisplayInfo> GetDisplays()
-    {
-        var displays = new List<DisplayInfo>();
-
-        try
-        {
-            for (uint i = 0; ; i++)
-            {
-                var d = new DISPLAY_DEVICE { cb = Marshal.SizeOf<DISPLAY_DEVICE>() };
-                if (!EnumDisplayDevices(null, i, ref d, 0))
-                    break;
-
-                if ((d.StateFlags & DISPLAY_DEVICE_ATTACHED) == 0)
-                    continue;
-
-                var m = new DISPLAY_DEVICE { cb = Marshal.SizeOf<DISPLAY_DEVICE>() };
-                EnumDisplayDevices(d.DeviceName, 0, ref m, 0);
-
-                var dm = new DEVMODE { dmSize = (short)Marshal.SizeOf<DEVMODE>() };
-                EnumDisplaySettings(d.DeviceName, ENUM_CURRENT_SETTINGS, ref dm);
-
-                var hMonitor = MonitorFromPoint(
-                    new POINT { x = dm.dmPositionX, y = dm.dmPositionY },
-                    MONITOR_DEFAULTTONEAREST);
-
-                var idx = displays.Count + 1;
-                displays.Add(new DisplayInfo
-                {
-                    Index = idx,
-                    DeviceName = d.DeviceName,
-                    FriendlyName = string.IsNullOrEmpty(m.DeviceString) ? $"Display {idx}" : m.DeviceString,
-                    Width = dm.dmPelsWidth,
-                    Height = dm.dmPelsHeight,
-                    PositionX = dm.dmPositionX,
-                    PositionY = dm.dmPositionY,
-                    IsPrimary = (d.StateFlags & DISPLAY_DEVICE_PRIMARY) != 0,
-                    HMonitor = hMonitor,
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            _log.Error($"Display enumeration failed: {ex.Message}");
-        }
-
-        return displays;
-    }
-
-    public async Task<string?> PickFolderAsync()
-    {
-        try
-        {
-            var hwnd = WindowNative.GetWindowHandle(_mainWindow);
-            var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
-            var picker = new FolderPicker(windowId);
-            var folder = await picker.PickSingleFolderAsync();
-            return folder?.Path;
-        }
-        catch (Exception ex)
-        {
-            _log.Error($"FolderPicker failed: {ex.Message}");
-            return null;
-        }
-    }
+    public NotificationMode NotificationMode { get; set; } = NotificationMode.Text;
+    public bool IsEnabled { get; set; } = true;
+    public string SavePath { get; set; } = "";
+    public string SelectedDisplay { get; set; } = "";
 
     private bool _hotkeyRegistered;
     private SUBCLASSPROC? _subclassDelegate;
     private GCHandle _subclassHandle;
     private const int HOTKEY_ID = 1;
-    private uint _hotkeyModifier = MOD_WIN;
+    private uint _hotkeyModifier = ModifierHelper.MOD_WIN;
     private Windows.System.VirtualKey _hotkeyKey = Windows.System.VirtualKey.F2;
-    private const uint MOD_ALT = 0x1;
-    private const uint MOD_CONTROL = 0x2;
-    private const uint MOD_SHIFT = 0x4;
-    private const uint MOD_WIN = 0x8;
     private const uint WM_HOTKEY = 0x0312;
     private const uint WM_GETMINMAXINFO = 0x0024;
+
+    private readonly List<IntPtr> _identifyHwnds = new();
+    private readonly WNDPROC _identifyProc = IdentifyWindowProc;
 
     public void RegisterGlobalHotkey()
     {
@@ -173,7 +109,7 @@ public class ScreenshotService
             {
                 _log.Warn("RegisterHotKey failed after shortcut update, reverting");
                 // Try re-registering with old values
-                _hotkeyModifier = MOD_WIN;
+                _hotkeyModifier = ModifierHelper.MOD_WIN;
                 _hotkeyKey = Windows.System.VirtualKey.F2;
                 RegisterHotKey(hwnd, HOTKEY_ID, _hotkeyModifier, (uint)_hotkeyKey);
             }
@@ -217,15 +153,14 @@ public class ScreenshotService
     {
         try
         {
-            if (!ReadIsEnabled())
+            if (!IsEnabled)
             {
                 _log.Info("Hotkey ignored — screenshot disabled in settings");
                 return;
             }
 
             var displays = GetDisplays();
-            var savedDisplay = ReadSelectedDisplay();
-            var display = displays.FirstOrDefault(d => d.DeviceName == savedDisplay)
+            var display = displays.FirstOrDefault(d => d.DeviceName == SelectedDisplay)
                        ?? displays.FirstOrDefault(d => d.IsPrimary)
                        ?? displays.FirstOrDefault();
 
@@ -235,7 +170,7 @@ public class ScreenshotService
                 return;
             }
 
-            var savePath = ReadSavePath() ?? GetDefaultScreenshotPath();
+            var savePath = string.IsNullOrEmpty(SavePath) ? GetDefaultScreenshotPath() : SavePath;
             _log.Info($"Hotkey triggered — capturing {display.FriendlyName} to {savePath}");
             var result = await CaptureScreenshotAsync(display, savePath);
             TrySendNotification(result);
@@ -247,64 +182,69 @@ public class ScreenshotService
         }
     }
 
-    private static bool ReadIsEnabled()
-    {
-        try
-        {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue("ScreenshotEnabled", out var v) && v is bool b)
-                return b;
-        }
-        catch { }
-        return true;
-    }
-
-    private static string? ReadSavePath()
-    {
-        try
-        {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue("ScreenshotSavePath", out var v) && v is string s)
-                return s;
-        }
-        catch { }
-        return null;
-    }
-
-    private static string? ReadSelectedDisplay()
-    {
-        try
-        {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue("ScreenshotDisplay", out var v) && v is string s)
-                return s;
-        }
-        catch { }
-        return null;
-    }
-
     private static string GetDefaultScreenshotPath()
     {
         var pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
         return Path.Combine(pictures, "Screenshots");
     }
 
-    private static int ReadNotificationMode()
+    public List<DisplayInfo> GetDisplays()
+    {
+        var displays = new List<DisplayInfo>();
+        var index = 0;
+        DISPLAY_DEVICE dd = default;
+        dd.cb = Marshal.SizeOf<DISPLAY_DEVICE>();
+        while (EnumDisplayDevices(null, (uint)index, ref dd, 0))
+        {
+            if ((dd.StateFlags & DISPLAY_DEVICE_ATTACHED) != 0)
+            {
+                DEVMODE dm = default;
+                dm.dmSize = (short)Marshal.SizeOf<DEVMODE>();
+                if (EnumDisplaySettings(dd.DeviceName, ENUM_CURRENT_SETTINGS, ref dm))
+                {
+                    displays.Add(new DisplayInfo
+                    {
+                        Index = index,
+                        DeviceName = dd.DeviceName,
+                        FriendlyName = dd.DeviceString,
+                        Width = dm.dmPelsWidth,
+                        Height = dm.dmPelsHeight,
+                        PositionX = dm.dmPositionX,
+                        PositionY = dm.dmPositionY,
+                        IsPrimary = (dd.StateFlags & DISPLAY_DEVICE_PRIMARY) != 0,
+                        HMonitor = MonitorFromPoint(
+                            new POINT { x = dm.dmPositionX + dm.dmPelsWidth / 2, y = dm.dmPositionY + dm.dmPelsHeight / 2 },
+                            MONITOR_DEFAULTTONEAREST),
+                    });
+                }
+            }
+            index++;
+        }
+        return displays;
+    }
+
+    public async Task<string?> PickFolderAsync()
     {
         try
         {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue("ScreenshotNotificationMode", out var v) && v is int i)
-                return i;
+            var folderPicker = new FolderPicker();
+            folderPicker.SuggestedStartLocation = PickerLocationId.PicturesLibrary;
+            folderPicker.FileTypeFilter.Add("*");
+            var hwnd = WindowNative.GetWindowHandle(_mainWindow);
+            InitializeWithWindow.Initialize(folderPicker, hwnd);
+            var folder = await folderPicker.PickSingleFolderAsync();
+            return folder?.Path;
         }
-        catch { }
-        return 1; // Text
+        catch (Exception ex)
+        {
+            _log.Warn($"PickFolderAsync failed: {ex.Message}");
+            return null;
+        }
     }
 
     private void TrySendNotification(string? imagePath)
     {
-        var mode = ReadNotificationMode();
-        if (mode == 0) // None
+        if (NotificationMode == NotificationMode.None)
             return;
 
         if (!AppNotificationManager.IsSupported())
@@ -317,12 +257,15 @@ public class ScreenshotService
                 .AddText(imagePath ?? "Capture failed")
                 .SetScenario(AppNotificationScenario.Urgent);
 
-            if (mode == 2 && imagePath != null) // Preview
+            if (NotificationMode == NotificationMode.Preview && imagePath != null)
                 builder.SetAppLogoOverride(new Uri(imagePath));
 
             AppNotificationManager.Default.Show(builder.BuildNotification());
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _log.Warn($"Notification show failed: {ex.Message}");
+        }
     }
 
     private bool IsEffectivelyDark()
@@ -338,7 +281,10 @@ public class ScreenshotService
             if (key?.GetValue("AppsUseLightTheme") is int v)
                 return v == 0;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _log.Warn($"Failed to read theme registry: {ex.Message}");
+        }
         return false;
     }
 
@@ -635,7 +581,8 @@ public class ScreenshotService
                 Marshal.GetExceptionForHR(hr));
         Marshal.Release(context);
 
-        hr = Marshal.QueryInterface(d3dDevice, ref IDXGIDeviceGuid, out var dxgiDevice);
+        var dxgiGuid = IDXGIDeviceGuid;
+        hr = Marshal.QueryInterface(d3dDevice, ref dxgiGuid, out var dxgiDevice);
         Marshal.Release(d3dDevice);
         if (hr < 0)
             throw new InvalidOperationException(
@@ -655,7 +602,8 @@ public class ScreenshotService
     private static GraphicsCaptureItem CreateCaptureItemForMonitor(nint hMonitor)
     {
         var factory = GetCaptureItemFactory();
-        var hr = factory.CreateForMonitor(hMonitor, ref GraphicsCaptureItemGuid, out nint ptr);
+        var capGuid = GraphicsCaptureItemGuid;
+        var hr = factory.CreateForMonitor(hMonitor, ref capGuid, out nint ptr);
         if (hr < 0)
             Marshal.ThrowExceptionForHR(hr);
         return GraphicsCaptureItem.FromAbi(ptr);
@@ -695,6 +643,9 @@ public class ScreenshotService
         int CreateForMonitor(nint hMonitor, ref Guid riid, out nint ppv);
         int CreateForWindow(nint hwnd, ref Guid riid, out nint ppv);
     }
+
+    private static readonly Guid IDXGIDeviceGuid = new("7EC71627-C1F5-44A2-B24B-11684F3E92EB");
+    private static readonly Guid GraphicsCaptureItemGuid = new("79C3F95B-31F7-4EC2-A464-632EF5D30760");
 
     [DllImport("combase.dll")]
     private static extern int RoGetActivationFactory(IntPtr hString, ref Guid iid, out IntPtr factory);

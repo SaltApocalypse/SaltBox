@@ -3,6 +3,8 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using SaltBox.Services;
+using SaltBox.Helpers;
+using static SaltBox.Helpers.ModifierHelper;
 using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using Windows.System;
@@ -19,6 +21,7 @@ public sealed partial class KeyRecorderDialog : ContentDialog
     private readonly HashSet<VirtualKey> _pressedKeys = new();
     private Microsoft.UI.Dispatching.DispatcherQueue _dispatcher = null!;
     private ShortcutRegistry? _registry;
+    private string? _toolName;
     private string _conflictSystemPrefix = "";
     private string _conflictAppPrefix = "";
     private string _conflictTitle = "";
@@ -56,6 +59,11 @@ public sealed partial class KeyRecorderDialog : ContentDialog
     public void SetShortcutRegistry(ShortcutRegistry registry)
     {
         _registry = registry;
+    }
+
+    public void SetToolName(string toolName)
+    {
+        _toolName = toolName;
     }
 
     private void ContentDialog_Loaded(object sender, RoutedEventArgs e)
@@ -177,7 +185,7 @@ public sealed partial class KeyRecorderDialog : ContentDialog
             _keyNames.Add("Shift");
 
         if (_actionKey.HasValue)
-            _keyNames.Add(GetActionKeyName(_actionKey.Value));
+            _keyNames.Add(ModifierHelper.GetKeyName(_actionKey.Value));
     }
 
     private void UpdateSaveButton()
@@ -197,7 +205,7 @@ public sealed partial class KeyRecorderDialog : ContentDialog
             if (_modifiers.Contains(VirtualKey.Control)) mod |= MOD_CONTROL;
             if (_modifiers.Contains(VirtualKey.Menu)) mod |= MOD_ALT;
             if (_modifiers.Contains(VirtualKey.Shift)) mod |= MOD_SHIFT;
-            var (isConflict, isSystem, name) = _registry.CheckConflict(mod, _actionKey!.Value);
+            var (isConflict, isSystem, name) = _registry.CheckConflict(mod, _actionKey!.Value, _toolName);
             hasConflict = isConflict;
             if (isConflict)
             {
@@ -210,24 +218,6 @@ public sealed partial class KeyRecorderDialog : ContentDialog
         WarningBar.IsOpen = IsUnconventional && !hasConflict;
     }
 
-    private static string GetActionKeyName(VirtualKey key)
-    {
-        if (key >= VirtualKey.F1 && key <= VirtualKey.F12)
-            return $"F{key - VirtualKey.F1 + 1}";
-        if (key >= VirtualKey.Number0 && key <= VirtualKey.Number9)
-            return $"{(char)('0' + key - VirtualKey.Number0)}";
-        if (key >= VirtualKey.A && key <= VirtualKey.Z)
-            return $"{(char)('A' + key - VirtualKey.A)}";
-        return key switch
-        {
-            VirtualKey.LeftButton => "Mouse Left",
-            VirtualKey.RightButton => "Mouse Right",
-            VirtualKey.MiddleButton => "Mouse Middle",
-            VirtualKey.XButton1 => "Mouse X1",
-            VirtualKey.XButton2 => "Mouse X2",
-            _ => key.ToString()
-        };
-    }
 
     private void OnPrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
     {
@@ -433,9 +423,4 @@ public sealed partial class KeyRecorderDialog : ContentDialog
         }
         return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
     }
-
-    private const uint MOD_ALT = 0x1;
-    private const uint MOD_CONTROL = 0x2;
-    private const uint MOD_SHIFT = 0x4;
-    private const uint MOD_WIN = 0x8;
 }

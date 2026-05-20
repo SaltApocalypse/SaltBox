@@ -1,3 +1,5 @@
+using SaltBox.Helpers;
+using static SaltBox.Helpers.ModifierHelper;
 using Windows.System;
 
 namespace SaltBox.Services;
@@ -6,7 +8,7 @@ public class ShortcutRegistry
 {
     private readonly List<ShortcutEntry> _appShortcuts = new();
 
-    public (bool HasConflict, bool IsSystem, string Name) CheckConflict(uint modifier, VirtualKey key)
+    public (bool HasConflict, bool IsSystem, string Name) CheckConflict(uint modifier, VirtualKey key, string? excludeToolName = null)
     {
         if (key == VirtualKey.None)
             return (false, false, "");
@@ -15,7 +17,8 @@ public class ShortcutRegistry
         if (sysConflict != null)
             return (true, true, sysConflict.Name);
 
-        var appConflict = _appShortcuts.FirstOrDefault(s => s.Modifier == modifier && s.Key == key);
+        var appConflict = _appShortcuts.FirstOrDefault(s =>
+            s.Modifier == modifier && s.Key == key && s.Name != excludeToolName);
         if (appConflict != null)
             return (true, false, appConflict.Name);
 
@@ -116,9 +119,4 @@ public class ShortcutRegistry
     };
 
     private record ShortcutEntry(string Name, uint Modifier, VirtualKey Key);
-
-    private const uint MOD_ALT = 0x1;
-    private const uint MOD_CONTROL = 0x2;
-    private const uint MOD_SHIFT = 0x4;
-    private const uint MOD_WIN = 0x8;
 }

@@ -1,6 +1,7 @@
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Serilog;
 using System.Runtime.InteropServices;
 using Windows.ApplicationModel;
 using Windows.Storage;
@@ -25,6 +26,7 @@ public class TrayService
     private const uint TPM_LEFTALIGN = 0x0000;
     private const uint TPM_RETURNCMD = 0x0100;
     private const uint MF_STRING = 0;
+    private const uint MF_BYPOSITION = 0x0400;
     private const uint MF_SEPARATOR = 0x0800;
 
     private readonly MainWindow _window;
@@ -159,10 +161,10 @@ public class TrayService
         var hMenu = CreatePopupMenu();
         if (hMenu == IntPtr.Zero) return;
 
-        InsertMenu(hMenu, 0, MF_STRING, 1, "显示 SaltBox");
-        InsertMenu(hMenu, 1, MF_SEPARATOR, 0, null);
-        InsertMenu(hMenu, 2, MF_STRING, 2, "设置");
-        InsertMenu(hMenu, 3, MF_STRING, 3, "退出");
+        InsertMenu(hMenu, 0, MF_STRING | MF_BYPOSITION, 1, "显示 SaltBox");
+        InsertMenu(hMenu, 1, MF_SEPARATOR | MF_BYPOSITION, 0, null);
+        InsertMenu(hMenu, 2, MF_STRING | MF_BYPOSITION, 2, "设置");
+        InsertMenu(hMenu, 3, MF_STRING | MF_BYPOSITION, 3, "退出");
 
         GetCursorPos(out var pt);
 
@@ -276,8 +278,9 @@ public class TrayService
         {
             return Path.Combine(Package.Current.InstalledLocation.Path, "Assets", "StoreLogo.png");
         }
-        catch
+        catch (Exception ex)
         {
+            Log.Warning("TryGetPkgPath failed: {Message}", ex.Message);
             return null;
         }
     }

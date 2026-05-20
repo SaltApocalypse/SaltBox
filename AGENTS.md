@@ -209,9 +209,17 @@ Use Serilog only.
 - Must be signed for production (self-signed cert works if installed to Trusted People store on target machine).
 - Must be present next to `SaltBox.exe` in the publish directory.
 - The `.csproj` includes it via a conditional `<Content>` reference; CI builds it and copies to `./publish` before `vpk pack`.
-- On first run after install, `App.xaml.cs` `RegisterIdentityPackage()` calls `PackageManager.AddPackageByUriAsync()` with `ExternalLocationUri` set to `AppContext.BaseDirectory`.
+- On first run after install, `RegisterIdentityPackage()` is called via `_ = Task.Run(() => RegisterIdentityPackage())` in `App.xaml.cs` `OnLaunched()`, not in the static constructor's `OnFirstRun` callback — this avoids deadlocks and ensures Serilog is initialized.
 - Registry fallback (`%TEMP%`) is used when no package identity is detected (try-catch around all `ApplicationData.Current` calls).
 - GitHub Actions workflow (`release.yml`) generates a self-signed cert in CI, signs the identity package, and copies it to publish directory.
+
+# Publish Rules
+
+- Always set `PublishTrimmed` to `false` for WinUI 3 — trimming removes necessary WinRT metadata and causes silent startup failure.
+- Use `WindowsAppSDKSelfContained = true` to bundle the WinAppSDK runtime (no MSIX dependency).
+- Target `win-x64` for releases.
+- Run `dotnet publish -c Release -r win-x64 --self-contained -o ./publish` before `vpk pack`.
+- Always test `./publish/SaltBox.exe` directly on a clean machine before packaging with Velopack.
 
 # UI Rules
 
