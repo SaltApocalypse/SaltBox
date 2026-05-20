@@ -1,4 +1,5 @@
 using Microsoft.UI;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.Win32;
 using Microsoft.Windows.AppNotifications;
@@ -37,12 +38,14 @@ public class ScreenshotService
     private readonly MainWindow _mainWindow;
     private readonly LogService _log;
     private readonly ThemeService _themeService;
+    private readonly DispatcherQueue _uiDispatcher;
 
     public ScreenshotService(MainWindow mainWindow, LogService log, ThemeService themeService)
     {
         _mainWindow = mainWindow;
         _log = log;
         _themeService = themeService;
+        _uiDispatcher = mainWindow.DispatcherQueue;
     }
 
     public NotificationMode NotificationMode { get; set; } = NotificationMode.Text;
@@ -62,15 +65,30 @@ public class ScreenshotService
     private readonly List<IntPtr> _identifyHwnds = new();
     private readonly WNDPROC _identifyProc = IdentifyWindowProc;
 
+    private bool _useHookFallback;
+    private static readonly LowLevelKeyboardProc _hookProc = HookProcCallback;
+    private static GCHandle _hookHandle;
+    private static IntPtr _hookId = IntPtr.Zero;
+    private static ScreenshotService? _hookInstance;
+
     public void RegisterGlobalHotkey()
     {
         if (_hotkeyRegistered) return;
+
+        // Mouse buttons: RegisterHotKey returns TRUE but never fires WM_HOTKEY
+        if (_hotkeyKey is Windows.System.VirtualKey.XButton1 or Windows.System.VirtualKey.XButton2)
+        {
+            _log.Warn("Mouse button hotkey, using low-level hook");
+            InstallHookFallback();
+            return;
+        }
 
         var hwnd = WindowNative.GetWindowHandle(_mainWindow);
 
         if (!RegisterHotKey(hwnd, HOTKEY_ID, _hotkeyModifier, (uint)_hotkeyKey))
         {
-            _log.Warn("RegisterHotKey failed (hotkey may be in use by another app)");
+            _log.Warn("RegisterHotKey failed, falling back to low-level hook");
+            InstallHookFallback();
             return;
         }
 
@@ -82,11 +100,13 @@ public class ScreenshotService
             UnregisterHotKey(hwnd, HOTKEY_ID);
             _subclassHandle.Free();
             _subclassDelegate = null;
-            _log.Warn("SetWindowSubclass failed");
+            _log.Warn("SetWindowSubclass failed, falling back to low-level hook");
+            InstallHookFallback();
             return;
         }
 
         _hotkeyRegistered = true;
+        UninstallHookFallback();
         _log.Info($"Global hotkey registered (modifier={_hotkeyModifier}, key={_hotkeyKey})");
     }
 
@@ -101,23 +121,72 @@ public class ScreenshotService
         _hotkeyModifier = modifier;
         _hotkeyKey = key;
 
+        // Mouse buttons: RegisterHotKey returns TRUE but never fires WM_HOTKEY
+        if (key is Windows.System.VirtualKey.XButton1 or Windows.System.VirtualKey.XButton2)
+        {
+            if (_hotkeyRegistered)
+            {
+                var hwnd = WindowNative.GetWindowHandle(_mainWindow);
+                UnregisterHotKey(hwnd, HOTKEY_ID);
+                _hotkeyRegistered = false;
+            }
+            UninstallHookFallback();
+            InstallHookFallback();
+            return;
+        }
+
         if (_hotkeyRegistered)
         {
             var hwnd = WindowNative.GetWindowHandle(_mainWindow);
             UnregisterHotKey(hwnd, HOTKEY_ID);
             if (!RegisterHotKey(hwnd, HOTKEY_ID, modifier, (uint)key))
             {
-                _log.Warn("RegisterHotKey failed after shortcut update, reverting");
-                // Try re-registering with old values
-                _hotkeyModifier = ModifierHelper.MOD_WIN;
-                _hotkeyKey = Windows.System.VirtualKey.F2;
-                RegisterHotKey(hwnd, HOTKEY_ID, _hotkeyModifier, (uint)_hotkeyKey);
+                _log.Warn("RegisterHotKey failed after shortcut update, falling back to hook");
+                InstallHookFallback();
+            }
+            else
+            {
+                UninstallHookFallback();
+            }
+        }
+        else
+        {
+            // Not yet registered — try RegisterHotKey, fall back to hook
+            var hwnd = WindowNative.GetWindowHandle(_mainWindow);
+            if (!RegisterHotKey(hwnd, HOTKEY_ID, modifier, (uint)key))
+            {
+                _log.Warn("RegisterHotKey failed for shortcut update, falling back to hook");
+                InstallHookFallback();
+                _hotkeyRegistered = true;
+            }
+            else
+            {
+                _subclassDelegate = OnWindowMessage;
+                _subclassHandle = GCHandle.Alloc(_subclassDelegate);
+
+                if (!SetWindowSubclass(hwnd, _subclassDelegate, (IntPtr)HOTKEY_ID, IntPtr.Zero))
+                {
+                    UnregisterHotKey(hwnd, HOTKEY_ID);
+                    _subclassHandle.Free();
+                    _subclassDelegate = null;
+                    _log.Warn("SetWindowSubclass failed for shortcut update, falling back to hook");
+                    InstallHookFallback();
+                    _hotkeyRegistered = true;
+                }
+                else
+                {
+                    _hotkeyRegistered = true;
+                    UninstallHookFallback();
+                    _log.Info($"Global hotkey updated (modifier={_hotkeyModifier}, key={_hotkeyKey})");
+                }
             }
         }
     }
 
     public void UnregisterGlobalHotkey()
     {
+        UninstallHookFallback();
+
         if (!_hotkeyRegistered) return;
 
         var hwnd = WindowNative.GetWindowHandle(_mainWindow);
@@ -128,6 +197,111 @@ public class ScreenshotService
         _subclassDelegate = null;
         _hotkeyRegistered = false;
         _log.Info("Global hotkey unregistered");
+    }
+
+    private void InstallHookFallback()
+    {
+        if (_useHookFallback) return;
+        UninstallHookFallback();
+
+        var isMouse = _hotkeyKey is Windows.System.VirtualKey.XButton1 or Windows.System.VirtualKey.XButton2;
+        var hookType = isMouse ? WH_MOUSE_LL : WH_KEYBOARD_LL;
+
+        _hookInstance = this;
+        _hookHandle = GCHandle.Alloc(_hookProc);
+        _hookId = SetWindowsHookEx(hookType, _hookProc, GetModuleHandle(null), 0);
+
+        if (_hookId == IntPtr.Zero)
+        {
+            _hookHandle.Free();
+            _hookInstance = null;
+            _log.Error($"InstallHookFallback failed (type={hookType})");
+            return;
+        }
+
+        _useHookFallback = true;
+        _log.Info($"Fallback hook installed (type={(isMouse ? "WH_MOUSE_LL" : "WH_KEYBOARD_LL")}, key={_hotkeyKey})");
+    }
+
+    private void UninstallHookFallback()
+    {
+        if (!_useHookFallback) return;
+        _useHookFallback = false;
+        _hookInstance = null;
+        if (_hookId != IntPtr.Zero)
+            UnhookWindowsHookEx(_hookId);
+        _hookId = IntPtr.Zero;
+        _hookHandle.Free();
+    }
+
+    private static IntPtr HookProcCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode == HC_ACTION)
+        {
+            var instance = _hookInstance;
+            if (instance != null && instance._useHookFallback)
+                instance.ProcessHookEvent(wParam, lParam);
+        }
+        return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+    }
+
+    private void ProcessHookEvent(IntPtr wParam, IntPtr lParam)
+    {
+        var isMouse = _hotkeyKey is Windows.System.VirtualKey.XButton1 or Windows.System.VirtualKey.XButton2;
+
+        if (isMouse)
+        {
+            var msg = (int)wParam;
+            if (msg != WM_XBUTTONDOWN) return;
+
+            var hookStruct = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+            var xButton = (hookStruct.mouseData >> 16) & 0xFFFF;
+            var expected = _hotkeyKey switch
+            {
+                Windows.System.VirtualKey.XButton1 => XBUTTON1,
+                Windows.System.VirtualKey.XButton2 => XBUTTON2,
+                _ => 0u
+            };
+            if (xButton != expected) return;
+        }
+        else
+        {
+            var msg = (int)wParam;
+            if (msg != WM_KEYDOWN && msg != WM_SYSKEYDOWN) return;
+            var vkCode = Marshal.ReadInt32(lParam);
+            if ((uint)vkCode != (uint)_hotkeyKey) return;
+        }
+
+        if (!CheckModifiersPressed()) return;
+
+        _uiDispatcher.TryEnqueue(() => _ = HandleHotkeyCaptureAsync());
+    }
+
+    private bool CheckModifiersPressed()
+    {
+        bool IsDown(int vk) => (GetAsyncKeyState(vk) & 0x8000) != 0;
+
+        var hasAlt = (_hotkeyModifier & ModifierHelper.MOD_ALT) != 0;
+        var hasCtrl = (_hotkeyModifier & ModifierHelper.MOD_CONTROL) != 0;
+        var hasShift = (_hotkeyModifier & ModifierHelper.MOD_SHIFT) != 0;
+        var hasWin = (_hotkeyModifier & ModifierHelper.MOD_WIN) != 0;
+
+        if (hasAlt != IsDown((int)Windows.System.VirtualKey.Menu)) return false;
+        if (hasCtrl != IsDown((int)Windows.System.VirtualKey.Control)) return false;
+        if (hasShift != IsDown((int)Windows.System.VirtualKey.Shift)) return false;
+        if (hasWin != (IsDown((int)Windows.System.VirtualKey.LeftWindows) ||
+                       IsDown((int)Windows.System.VirtualKey.RightWindows))) return false;
+
+        // Ensure no extra modifiers are pressed
+        var extras = 0;
+        if (IsDown((int)Windows.System.VirtualKey.Menu)) extras++;
+        if (IsDown((int)Windows.System.VirtualKey.Control)) extras++;
+        if (IsDown((int)Windows.System.VirtualKey.Shift)) extras++;
+        if (IsDown((int)Windows.System.VirtualKey.LeftWindows)) extras++;
+        if (IsDown((int)Windows.System.VirtualKey.RightWindows)) extras++;
+
+        var expected = (hasAlt ? 1 : 0) + (hasCtrl ? 1 : 0) + (hasShift ? 1 : 0) + (hasWin ? 1 : 0);
+        return extras == expected;
     }
 
     private IntPtr OnWindowMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, IntPtr uId, IntPtr refData)
@@ -770,6 +944,42 @@ public class ScreenshotService
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     private delegate IntPtr SUBCLASSPROC(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, IntPtr uIdSubclass, IntPtr dwRefData);
+
+    // --- Low-level hook fallback (when RegisterHotKey fails) ---
+
+    private const int WH_KEYBOARD_LL = 13;
+    private const int WH_MOUSE_LL = 14;
+    private const int HC_ACTION = 0;
+    private const int WM_KEYDOWN = 0x0100;
+    private const int WM_SYSKEYDOWN = 0x0104;
+    private const int WM_XBUTTONDOWN = 0x20B;
+    private const uint XBUTTON1 = 0x0001;
+    private const uint XBUTTON2 = 0x0002;
+
+    private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(int idHook, Delegate lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MSLLHOOKSTRUCT
+    {
+        public POINT pt;
+        public uint mouseData;
+        public uint flags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
 
     // --- Identify overlay (Win32 native windows) ---
 
