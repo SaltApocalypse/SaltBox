@@ -65,6 +65,21 @@
                 </InfoBar>
             </StackPanel>
 
+            <StackPanel Spacing="12">
+                <TextBlock
+                    Text="{x:Bind ViewModel.Lang.SettingsDevModeTitle, Mode=OneWay}"
+                    Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                <controls:SettingsCard
+                    Header="{x:Bind ViewModel.Lang.SettingsDevMode, Mode=OneWay}"
+                    Description="{x:Bind ViewModel.Lang.SettingsDevModeDescription, Mode=OneWay}">
+                    <ToggleSwitch
+                        IsOn="{x:Bind ViewModel.IsDeveloperModeEnabled, Mode=TwoWay}"
+                        OnContent="{x:Bind ViewModel.Lang.SettingsDevModeOn, Mode=OneWay}"
+                        OffContent="{x:Bind ViewModel.Lang.SettingsDevModeOff, Mode=OneWay}" />
+                </controls:SettingsCard>
+            </StackPanel>
+
         </StackPanel>
     </ScrollViewer>
 </Page>

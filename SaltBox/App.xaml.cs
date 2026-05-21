@@ -20,6 +20,7 @@ public partial class App : Application
     private static readonly Mutex? _singleInstanceMutex;
     private static readonly bool _isFirstInstance;
     private static bool _isFirstRun;
+    private static InMemoryLogSink? _memorySink;
 
     static App()
     {
@@ -82,13 +83,16 @@ public partial class App : Application
         var logDir = GetLogDirectory();
         var logPath = Path.Combine(logDir, "log-.txt");
 
+        _memorySink = new InMemoryLogSink();
+
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
+            .MinimumLevel.Debug()
             .WriteTo.File(
                 path: logPath,
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 30,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .WriteTo.Sink(_memorySink, Serilog.Events.LogEventLevel.Debug)
             .CreateLogger();
     }
 
@@ -114,6 +118,10 @@ public partial class App : Application
                 services.AddSingleton<UpdateService>();
                 services.AddSingleton<MainWindow>();
                 services.AddSingleton<MainViewModel>();
+                services.AddSingleton<InMemoryLogSink>(_ => _memorySink!);
+                services.AddSingleton<DeveloperModeService>();
+                services.AddTransient<DeveloperModeViewModel>();
+                services.AddTransient<DeveloperModePage>();
                 services.AddTransient<HomeViewModel>();
                 services.AddTransient<ScreenshotViewModel>();
                 services.AddTransient<SettingsViewModel>();

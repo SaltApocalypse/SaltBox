@@ -4,7 +4,7 @@
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
-  <Identity Name="SaltBox" Publisher="CN=SaltA" Version="0.1.0.0" ProcessorArchitecture="neutral" />
+  <Identity Name="SaltBox" Publisher="CN=SaltA" Version="0.2.0.0" ProcessorArchitecture="neutral" />
   <Properties>
     <DisplayName>SaltBox</DisplayName>
     <PublisherDisplayName>SaltA</PublisherDisplayName>

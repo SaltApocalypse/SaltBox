@@ -43,6 +43,14 @@
                     Content="{x:Bind Lang.NavScreenshot, Mode=OneWay}" />
             </controls:NavigationView.MenuItems>
 
+            <controls:NavigationView.FooterMenuItems>
+                <controls:NavigationViewItem
+                    x:Name="DevModeNavItem"
+                    Tag="DeveloperMode" Icon="Setting"
+                    Content="{x:Bind Lang.NavDeveloperMode, Mode=OneWay}"
+                    Visibility="Collapsed" />
+            </controls:NavigationView.FooterMenuItems>
+
             <Frame x:Name="ContentFrame" />
         </controls:NavigationView>
     </Grid>

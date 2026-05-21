@@ -54,11 +54,11 @@ public partial class UpdateService : ObservableObject
     {
         try
         {
-            CurrentVersion = VelopackRuntimeInfo.VelopackProductVersion?.ToString() ?? "0.1.0";
+            CurrentVersion = VelopackRuntimeInfo.VelopackProductVersion?.ToString() ?? "0.2.0";
         }
         catch
         {
-            CurrentVersion = "0.1.0";
+            CurrentVersion = "0.2.0";
         }
     }
 

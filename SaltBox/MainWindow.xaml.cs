@@ -15,17 +15,19 @@ public sealed partial class MainWindow : Window
     private readonly LogService _log;
     private readonly ThemeService _theme;
     private readonly AppWindow _appWindow;
+    private readonly DeveloperModeService _devMode;
     private ScreenshotService? _screenshot;
     private TrayService? _tray;
     private string? _currentTag;
 
     public CultureService Lang { get; }
 
-    public MainWindow(IServiceProvider services, LogService log, ThemeService theme, CultureService lang)
+    public MainWindow(IServiceProvider services, LogService log, ThemeService theme, CultureService lang, DeveloperModeService devMode)
     {
         _services = services;
         _log = log;
         _theme = theme;
+        _devMode = devMode;
         Lang = lang;
 
         InitializeComponent();
@@ -64,6 +66,7 @@ public sealed partial class MainWindow : Window
             {
                 "Home" => Lang.NavHome,
                 "Screenshot" => Lang.NavScreenshot,
+                "DeveloperMode" => Lang.NavDeveloperMode,
                 "Settings" => Lang.SettingsTitle,
                 _ => ""
             };
@@ -78,6 +81,13 @@ public sealed partial class MainWindow : Window
 
         _tray = _services.GetRequiredService<TrayService>();
         _tray.Initialize();
+
+        _devMode.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(DeveloperModeService.IsEnabled))
+                DevModeNavItem.Visibility = _devMode.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
+        };
+        DevModeNavItem.Visibility = _devMode.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
 
         NavView.SelectedItem = NavView.MenuItems[0];
         NavigateTo("Home");
@@ -129,6 +139,7 @@ public sealed partial class MainWindow : Window
         {
             "Home" => typeof(HomePage),
             "Screenshot" => typeof(ScreenshotPage),
+            "DeveloperMode" => typeof(DeveloperModePage),
             "Settings" => typeof(SettingsPage),
             _ => null
         };
@@ -146,11 +157,14 @@ public sealed partial class MainWindow : Window
         {
             "Home" => Lang.NavHome,
             "Screenshot" => Lang.NavScreenshot,
+            "DeveloperMode" => Lang.NavDeveloperMode,
             "Settings" => Lang.SettingsTitle,
             _ => ""
         };
 
-        if (_currentTag == "Settings")
+        if (_currentTag == "DeveloperMode")
+            NavView.SelectedItem = DevModeNavItem;
+        else if (_currentTag == "Settings")
             NavView.SelectedItem = (NavigationViewItem)NavView.SettingsItem;
 
         _log.Info($"Navigated to {tag}");

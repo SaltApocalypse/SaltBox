@@ -14,6 +14,7 @@ public partial class CultureService : ObservableObject
             ["NavHome"] = "Home",
             ["NavTools"] = "Tools",
             ["NavScreenshot"] = "Screenshot",
+            ["NavDeveloperMode"] = "Developer Mode",
             ["HomeTitle"] = "Welcome to SaltBox",
             ["HomeSubtitle"] = "Your personal Windows toolbox",
             ["HomeToolsButton"] = "Explore Tools",
@@ -88,12 +89,20 @@ public partial class CultureService : ObservableObject
             ["ShortcutWarningMessage"] = "This shortcut has no modifier key (Win, Ctrl, Alt, or Shift) and may interfere with normal typing.",
             ["Save"] = "Save",
             ["Cancel"] = "Cancel",
+            ["SettingsDevModeTitle"] = "Developer",
+            ["SettingsDevMode"] = "Developer Mode",
+            ["SettingsDevModeDescription"] = "Show developer diagnostics page in the navigation panel.",
+            ["SettingsDevModeOn"] = "On",
+            ["SettingsDevModeOff"] = "Off",
+            ["DevLogsTitle"] = "Logs",
+            ["DevLogLevel"] = "Minimum log level",
         },
         ["zh-CN"] = new()
         {
             ["NavHome"] = "主页",
             ["NavTools"] = "工具",
             ["NavScreenshot"] = "屏幕截图",
+            ["NavDeveloperMode"] = "开发者模式",
             ["HomeTitle"] = "欢迎使用 SaltBox",
             ["HomeSubtitle"] = "您的个人 Windows 工具箱",
             ["HomeToolsButton"] = "浏览工具",
@@ -168,6 +177,13 @@ public partial class CultureService : ObservableObject
             ["ShortcutWarningMessage"] = "此快捷键没有修饰键（Win、Ctrl、Alt 或 Shift），可能会干扰正常输入。",
             ["Save"] = "保存",
             ["Cancel"] = "取消",
+            ["SettingsDevModeTitle"] = "开发者",
+            ["SettingsDevMode"] = "开发者模式",
+            ["SettingsDevModeDescription"] = "在导航面板中显示开发者诊断页面。",
+            ["SettingsDevModeOn"] = "开",
+            ["SettingsDevModeOff"] = "关",
+            ["DevLogsTitle"] = "日志",
+            ["DevLogLevel"] = "最低日志级别",
         }
     };
 
@@ -200,6 +216,7 @@ public partial class CultureService : ObservableObject
     public string NavHome => _strings.GetValueOrDefault(nameof(NavHome), "Home");
     public string NavTools => _strings.GetValueOrDefault(nameof(NavTools), "Tools");
     public string NavScreenshot => _strings.GetValueOrDefault(nameof(NavScreenshot), "Screenshot");
+    public string NavDeveloperMode => _strings.GetValueOrDefault(nameof(NavDeveloperMode), "Developer Mode");
     public string HomeTitle => _strings.GetValueOrDefault(nameof(HomeTitle), "Welcome to SaltBox");
     public string HomeSubtitle => _strings.GetValueOrDefault(nameof(HomeSubtitle), "Your personal Windows toolbox");
     public string HomeToolsButton => _strings.GetValueOrDefault(nameof(HomeToolsButton), "Explore Tools");
@@ -274,6 +291,13 @@ public partial class CultureService : ObservableObject
     public string ShortcutWarningMessage => _strings.GetValueOrDefault(nameof(ShortcutWarningMessage), "This shortcut has no modifier key (Win, Ctrl, Alt, or Shift) and may interfere with normal typing.");
     public string Save => _strings.GetValueOrDefault(nameof(Save), "Save");
     public string Cancel => _strings.GetValueOrDefault(nameof(Cancel), "Cancel");
+    public string SettingsDevMode => _strings.GetValueOrDefault(nameof(SettingsDevMode), "Developer Mode");
+    public string SettingsDevModeTitle => _strings.GetValueOrDefault(nameof(SettingsDevModeTitle), "Developer");
+    public string SettingsDevModeDescription => _strings.GetValueOrDefault(nameof(SettingsDevModeDescription), "Show developer diagnostics page in the navigation panel.");
+    public string SettingsDevModeOn => _strings.GetValueOrDefault(nameof(SettingsDevModeOn), "On");
+    public string SettingsDevModeOff => _strings.GetValueOrDefault(nameof(SettingsDevModeOff), "Off");
+    public string DevLogsTitle => _strings.GetValueOrDefault(nameof(DevLogsTitle), "Logs");
+    public string DevLogLevel => _strings.GetValueOrDefault(nameof(DevLogLevel), "Minimum log level");
 
     public void SetCulture(string code)
     {
