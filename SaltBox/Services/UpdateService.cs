@@ -55,10 +55,12 @@ public partial class UpdateService : ObservableObject
         try
         {
             CurrentVersion = VelopackRuntimeInfo.VelopackProductVersion?.ToString() ?? "0.2.0";
+            _log.Debug($"InitVersion: VelopackProductVersion = {VelopackRuntimeInfo.VelopackProductVersion?.ToString() ?? "null"}, CurrentVersion set to {CurrentVersion}");
         }
-        catch
+        catch (Exception ex)
         {
             CurrentVersion = "0.2.0";
+            _log.Debug($"InitVersion: fallback to 0.2.0 due to {ex.Message}");
         }
     }
 
@@ -66,6 +68,7 @@ public partial class UpdateService : ObservableObject
     {
         var section = config.GetSection("Update");
         var type = section["Type"];
+        _log.Debug($"ConfigureFromConfig: type = {type ?? "(null)"}");
 
         switch (type)
         {
@@ -73,25 +76,44 @@ public partial class UpdateService : ObservableObject
                 var repoUrl = section["GithubRepoUrl"];
                 var token = section["GithubAccessToken"] ?? "";
                 var pre = bool.TryParse(section["GithubPrerelease"], out var prerelease) && prerelease;
+                _log.Debug($"ConfigureFromConfig: github repoUrl = {repoUrl}, prerelease = {pre}, token set = {!string.IsNullOrEmpty(token)}");
 
                 if (!string.IsNullOrEmpty(repoUrl))
+                {
                     _mgr = new UpdateManager(new GithubSource(repoUrl, token, pre));
+                    _log.Debug("ConfigureFromConfig: UpdateManager created with GithubSource");
+                }
+                else
+                {
+                    _log.Debug("ConfigureFromConfig: repoUrl is empty, UpdateManager NOT created");
+                }
                 break;
 
             default:
                 var url = section["Url"];
+                _log.Debug($"ConfigureFromConfig: default type, url = {url ?? "(null)"}");
                 if (!string.IsNullOrEmpty(url))
+                {
                     _mgr = new UpdateManager(new SimpleWebSource(new Uri(url)));
+                    _log.Debug("ConfigureFromConfig: UpdateManager created with SimpleWebSource");
+                }
+                else
+                {
+                    _log.Debug("ConfigureFromConfig: url is empty, UpdateManager NOT created");
+                }
                 break;
         }
     }
 
     public async Task CheckForUpdatesAsync()
     {
+        _log.Debug($"CheckForUpdatesAsync: starting, _mgr = {(_mgr is null ? "null" : "not null")}, Status = {Status}, CurrentVersion = {CurrentVersion}");
+
         if (_mgr is null)
         {
             StatusMessage = "Update source not configured";
             Status = UpdateStatus.Error;
+            _log.Debug("CheckForUpdatesAsync: _mgr is null, aborting");
             return;
         }
 
@@ -102,27 +124,33 @@ public partial class UpdateService : ObservableObject
         try
         {
             _latest = await _mgr.CheckForUpdatesAsync();
+            _log.Debug($"CheckForUpdatesAsync: CheckForUpdatesAsync returned, _latest = {(_latest is null ? "null" : $"TargetFullRelease.Version = {_latest.TargetFullRelease.Version}")}");
+
             if (_latest is null)
             {
                 Status = UpdateStatus.UpToDate;
                 StatusMessage = "You have the latest version";
+                _log.Debug("CheckForUpdatesAsync: _latest is null, assuming up-to-date");
             }
             else
             {
                 LatestVersion = _latest.TargetFullRelease.Version.ToString();
                 Status = UpdateStatus.Available;
                 StatusMessage = $"Update {LatestVersion} available";
+                _log.Debug($"CheckForUpdatesAsync: update available: Current {CurrentVersion} -> Latest {LatestVersion}");
             }
         }
         catch (Exception ex)
         {
             _log.Error($"Update check failed: {ex.Message}");
+            _log.Debug($"CheckForUpdatesAsync: exception details: {ex}");
             Status = UpdateStatus.Error;
             StatusMessage = $"Check failed: {ex.Message}";
         }
 
         OnPropertyChanged(nameof(CanCheck));
         OnPropertyChanged(nameof(CanInstall));
+        _log.Debug($"CheckForUpdatesAsync: finished, Status = {Status}, StatusMessage = {StatusMessage}");
     }
 
     public async Task DownloadUpdateAsync()

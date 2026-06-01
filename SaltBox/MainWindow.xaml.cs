@@ -167,7 +167,7 @@ public sealed partial class MainWindow : Window
         else if (_currentTag == "Settings")
             NavView.SelectedItem = (NavigationViewItem)NavView.SettingsItem;
 
-        _log.Info($"Navigated to {tag}");
+
     }
 
     [DllImport("user32.dll")]
