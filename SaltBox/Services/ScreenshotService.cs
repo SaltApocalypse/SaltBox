@@ -14,8 +14,8 @@ using Windows.Foundation;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
-using SaltBox.ViewModels;
 using SaltBox.Helpers;
+using SaltBox.ViewModels;
 
 namespace SaltBox.Services;
 
@@ -541,10 +541,12 @@ public class ScreenshotService
     {
         Directory.CreateDirectory(saveFolder);
 
+        var isHdr = await HdrHelper.IsDisplayHdrAsync(_uiDispatcher);
+
         // Try D3D capture first; fall back to GDI BitBlt if D3D is unavailable
         try
         {
-            return await CaptureWithD3DAsync(display, saveFolder);
+            return await CaptureWithD3DAsync(display, saveFolder, isHdr);
         }
         catch (Exception ex)
         {
@@ -553,7 +555,7 @@ public class ScreenshotService
         }
     }
 
-    private async Task<string?> CaptureWithD3DAsync(DisplayInfo display, string saveFolder)
+    private async Task<string?> CaptureWithD3DAsync(DisplayInfo display, string saveFolder, bool isHdr)
     {
         Direct3D11CaptureFramePool? framePool = null;
         GraphicsCaptureSession? session = null;
@@ -563,9 +565,17 @@ public class ScreenshotService
             var d3dDevice = CreateDirect3DDevice();
             var captureItem = CreateCaptureItemForMonitor(display.HMonitor);
 
+            // Use FP16 pixel format on HDR displays to avoid pixel overclipping (washed-out colors)
+            var pixelFormat = isHdr
+                ? DirectXPixelFormat.R16G16B16A16Float
+                : DirectXPixelFormat.B8G8R8A8UIntNormalized;
+
+            if (isHdr)
+                _log.Info("HDR display detected — capturing with FP16 format");
+
             framePool = Direct3D11CaptureFramePool.Create(
                 d3dDevice,
-                DirectXPixelFormat.B8G8R8A8UIntNormalized,
+                pixelFormat,
                 2,
                 captureItem.Size);
 
@@ -599,6 +609,15 @@ public class ScreenshotService
 
             var softwareBitmap = await SoftwareBitmap.CreateCopyFromSurfaceAsync(
                 frame.Surface, BitmapAlphaMode.Ignore);
+
+            // Check if the SoftwareBitmap preserved FP16 format (HDR path)
+            if (isHdr && softwareBitmap.BitmapPixelFormat != BitmapPixelFormat.Bgra8)
+            {
+                _log.Info("Converting FP16 HDR frame to SDR with ACES tone mapping");
+                var size = captureItem.Size;
+                var pixels = HdrHelper.ConvertFp16ToSdrPixels(softwareBitmap, size.Width, size.Height);
+                return await SavePixelsAsync(pixels, size.Width, size.Height, saveFolder);
+            }
 
             return await SaveSoftwareBitmapAsync(softwareBitmap, saveFolder);
         }
