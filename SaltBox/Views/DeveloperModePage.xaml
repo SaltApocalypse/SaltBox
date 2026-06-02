@@ -1,42 +1,82 @@
 <Page x:Class="SaltBox.Views.DeveloperModePage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:controls="using:CommunityToolkit.WinUI.Controls"
-      xmlns:models="using:SaltBox.Models">
+      xmlns:controls="using:CommunityToolkit.WinUI.Controls">
 
     <ScrollViewer>
         <StackPanel Spacing="12" Margin="36,36,36,24">
             <TextBlock Text="{x:Bind ViewModel.Lang.DevLogsTitle, Mode=OneWay}"
                        Style="{StaticResource TitleTextBlockStyle}" />
 
-            <controls:SettingsCard Header="{x:Bind ViewModel.Lang.DevLogLevel, Mode=OneWay}">
+            <controls:SettingsExpander Header="{x:Bind ViewModel.Lang.DevLogLevel, Mode=OneWay}"
+                                       IsExpanded="False">
+
                 <ComboBox ItemsSource="{x:Bind ViewModel.LogLevels, Mode=OneWay}"
                           SelectedItem="{x:Bind ViewModel.SelectedMinLevel, Mode=TwoWay}"
                           MinWidth="120" />
-            </controls:SettingsCard>
+
+                <controls:SettingsExpander.Items>
+                    <controls:SettingsCard Header="{x:Bind ViewModel.Lang.DevCopyLogs, Mode=OneWay}"
+                                           Description="{x:Bind ViewModel.Lang.DevCopyLogsDesc, Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Command="{x:Bind ViewModel.CopyLogsCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <FontIcon Glyph="&#xE8C8;" FontSize="12" />
+                                    <TextBlock Text="{x:Bind ViewModel.Lang.DevCopyButton, Mode=OneWay}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{x:Bind ViewModel.ExportLogsCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <FontIcon Glyph="&#xE74E;" FontSize="12" />
+                                    <TextBlock Text="{x:Bind ViewModel.Lang.DevExportButton, Mode=OneWay}" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </controls:SettingsCard>
+
+                    <controls:SettingsCard Header="{x:Bind ViewModel.ExportStatusText, Mode=OneWay}"
+                                           Visibility="{x:Bind ViewModel.ShowExportResult, Mode=OneWay}">
+                        <Button Command="{x:Bind ViewModel.OpenLogFolderCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon Glyph="&#xED25;" FontSize="12" />
+                                <TextBlock Text="{x:Bind ViewModel.Lang.DevOpenLogFolder, Mode=OneWay}" />
+                            </StackPanel>
+                        </Button>
+                    </controls:SettingsCard>
+                </controls:SettingsExpander.Items>
+            </controls:SettingsExpander>
 
             <Border Background="{ThemeResource CardBackgroundFillColorDefault}"
                     CornerRadius="8">
-                <ScrollViewer MaxHeight="600" IsTabStop="True">
-                    <ItemsControl ItemsSource="{x:Bind ViewModel.LogEntries, Mode=OneWay}"
-                                  FontFamily="Consolas"
-                                  FontSize="12">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="models:LogEntry">
-                                <TextBlock TextWrapping="Wrap" Padding="0,1,4,1">
-                                    <Run Text="{x:Bind FormattedTimestamp, Mode=OneWay}"
-                                         Foreground="{ThemeResource TextFillColorSecondary}" />
-                                    <Run Text=" " />
-                                    <Run Text="{x:Bind FormattedLevel, Mode=OneWay}"
-                                         Foreground="{x:Bind LevelColor, Mode=OneWay}" />
-                                    <Run Text=" " />
-                                    <Run Text="{x:Bind Message, Mode=OneWay}"
-                                         Foreground="{x:Bind LevelColor, Mode=OneWay}" />
-                                </TextBlock>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                <Grid>
+                    <ScrollViewer x:Name="LogScrollViewer"
+                                  MaxHeight="600"
+                                  IsTabStop="True">
+                        <TextBox Text="{x:Bind ViewModel.FullLogText, Mode=OneWay}"
+                                 IsReadOnly="True"
+                                 IsTabStop="True"
+                                 FontFamily="Consolas"
+                                 FontSize="12"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 VerticalAlignment="Top"
+                                 Padding="12" />
+                    </ScrollViewer>
+
+                    <Button Command="{x:Bind ViewModel.ScrollToBottomCommand}"
+                            Visibility="{x:Bind ViewModel.ScrollToBottomVisible, Mode=OneWay}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Margin="0,0,16,16"
+                            Style="{StaticResource AccentButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE74B;" FontSize="12" />
+                            <TextBlock Text="回到底部" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
             </Border>
         </StackPanel>
     </ScrollViewer>

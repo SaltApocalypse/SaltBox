@@ -96,6 +96,13 @@ public partial class CultureService : ObservableObject
             ["SettingsDevModeOff"] = "Off",
             ["DevLogsTitle"] = "Logs",
             ["DevLogLevel"] = "Minimum log level",
+            ["DevCopyLogs"] = "Copy & Export",
+            ["DevCopyLogsDesc"] = "Copy logs to clipboard or export to file",
+            ["DevCopyButton"] = "Copy",
+            ["DevExportButton"] = "Export",
+            ["DevExportSuccess"] = "Exported successfully",
+            ["DevExportFailed"] = "Export failed",
+            ["DevOpenLogFolder"] = "Open folder",
         },
         ["zh-CN"] = new()
         {
@@ -184,6 +191,13 @@ public partial class CultureService : ObservableObject
             ["SettingsDevModeOff"] = "关",
             ["DevLogsTitle"] = "日志",
             ["DevLogLevel"] = "最低日志级别",
+            ["DevCopyLogs"] = "复制与导出",
+            ["DevCopyLogsDesc"] = "复制日志到剪贴板或导出到文件",
+            ["DevCopyButton"] = "复制",
+            ["DevExportButton"] = "导出",
+            ["DevExportSuccess"] = "导出成功",
+            ["DevExportFailed"] = "导出失败",
+            ["DevOpenLogFolder"] = "打开文件夹",
         }
     };
 
@@ -298,6 +312,13 @@ public partial class CultureService : ObservableObject
     public string SettingsDevModeOff => _strings.GetValueOrDefault(nameof(SettingsDevModeOff), "Off");
     public string DevLogsTitle => _strings.GetValueOrDefault(nameof(DevLogsTitle), "Logs");
     public string DevLogLevel => _strings.GetValueOrDefault(nameof(DevLogLevel), "Minimum log level");
+    public string DevCopyLogs => _strings.GetValueOrDefault(nameof(DevCopyLogs), "Copy & Export");
+    public string DevCopyLogsDesc => _strings.GetValueOrDefault(nameof(DevCopyLogsDesc), "Copy logs to clipboard or export to file");
+    public string DevCopyButton => _strings.GetValueOrDefault(nameof(DevCopyButton), "Copy");
+    public string DevExportButton => _strings.GetValueOrDefault(nameof(DevExportButton), "Export");
+    public string DevExportSuccess => _strings.GetValueOrDefault(nameof(DevExportSuccess), "Exported successfully");
+    public string DevExportFailed => _strings.GetValueOrDefault(nameof(DevExportFailed), "Export failed");
+    public string DevOpenLogFolder => _strings.GetValueOrDefault(nameof(DevOpenLogFolder), "Open folder");
 
     public void SetCulture(string code)
     {

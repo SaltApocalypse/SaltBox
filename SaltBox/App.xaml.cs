@@ -152,10 +152,23 @@ public partial class App : Application
 
         var config = _host.Services.GetRequiredService<IConfiguration>();
         var updateSection = config.GetSection("Update");
+        UpdateService? updater = null;
         if (!string.IsNullOrEmpty(updateSection["Type"]))
         {
-            var updater = _host.Services.GetRequiredService<UpdateService>();
+            updater = _host.Services.GetRequiredService<UpdateService>();
             updater.ConfigureFromConfig(config);
+
+            // Silent background auto-update check on startup
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await updater.CheckForUpdatesAsync();
+                    if (updater.Status == UpdateStatus.Available)
+                        log.Info($"Auto-update check: found version {updater.LatestVersion}");
+                }
+                catch { }
+            });
         }
 
         var window = _host.Services.GetRequiredService<MainWindow>();

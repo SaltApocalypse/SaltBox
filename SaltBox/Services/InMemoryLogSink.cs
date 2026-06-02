@@ -28,7 +28,7 @@ public class InMemoryLogSink : ILogEventSink
         return string.Join(Environment.NewLine,
             _entries
                 .Where(e => e.Level >= minLevel)
-                .OrderByDescending(e => e.Timestamp)
+                .OrderBy(e => e.Timestamp)
                 .Select(e => $"{e.Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{e.Level}] {e.Message}"));
     }
 
@@ -36,7 +36,7 @@ public class InMemoryLogSink : ILogEventSink
     {
         return _entries
             .Where(e => e.Level >= minLevel)
-            .OrderByDescending(e => e.Timestamp)
+            .OrderBy(e => e.Timestamp)
             .Select(e => new LogEntry(e.Timestamp, e.Level, e.Message))
             .ToList();
     }
