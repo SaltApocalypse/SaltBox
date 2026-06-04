@@ -10,6 +10,13 @@
     <ScrollViewer>
         <StackPanel Spacing="12" Margin="36,36,36,24">
 
+            <InfoBar
+                IsOpen="{x:Bind ViewModel.ShowUpdateBanner, Mode=OneWay}"
+                Message="{x:Bind ViewModel.UpdateBannerText, Mode=OneWay}"
+                Severity="Informational"
+                IsClosable="True"
+                IsIconVisible="True" />
+
             <TextBlock
                 Text="{x:Bind ViewModel.Lang.NavTools, Mode=OneWay}"
                 Style="{StaticResource BodyStrongTextBlockStyle}" />

@@ -103,6 +103,7 @@ public partial class CultureService : ObservableObject
             ["DevExportSuccess"] = "Exported successfully",
             ["DevExportFailed"] = "Export failed",
             ["DevOpenLogFolder"] = "Open folder",
+            ["HomeUpdateBanner"] = "New version v{0} -> v{1} available",
         },
         ["zh-CN"] = new()
         {
@@ -198,6 +199,7 @@ public partial class CultureService : ObservableObject
             ["DevExportSuccess"] = "导出成功",
             ["DevExportFailed"] = "导出失败",
             ["DevOpenLogFolder"] = "打开文件夹",
+            ["HomeUpdateBanner"] = "发现新版本 v{0} -> v{1}",
         }
     };
 
@@ -319,6 +321,7 @@ public partial class CultureService : ObservableObject
     public string DevExportSuccess => _strings.GetValueOrDefault(nameof(DevExportSuccess), "Exported successfully");
     public string DevExportFailed => _strings.GetValueOrDefault(nameof(DevExportFailed), "Export failed");
     public string DevOpenLogFolder => _strings.GetValueOrDefault(nameof(DevOpenLogFolder), "Open folder");
+    public string HomeUpdateBanner => _strings.GetValueOrDefault(nameof(HomeUpdateBanner), "New version v{0} -> v{1} available");
 
     public void SetCulture(string code)
     {

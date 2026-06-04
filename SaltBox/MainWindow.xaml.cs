@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -88,6 +89,27 @@ public sealed partial class MainWindow : Window
                 DevModeNavItem.Visibility = _devMode.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
         };
         DevModeNavItem.Visibility = _devMode.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
+
+        // Silent background auto-update check on startup
+        var config = _services.GetRequiredService<IConfiguration>();
+        var updateType = config.GetSection("Update")["Type"];
+        if (!string.IsNullOrEmpty(updateType))
+        {
+            var updater = _services.GetRequiredService<UpdateService>();
+            if (updater.IsConfigured)
+            {
+                DispatcherQueue.TryEnqueue(async () =>
+                {
+                    try
+                    {
+                        await updater.CheckForUpdatesAsync();
+                        if (updater.Status == UpdateStatus.Available)
+                            _log.Info($"Auto-update check: found version {updater.LatestVersion}");
+                    }
+                    catch { }
+                });
+            }
+        }
 
         NavView.SelectedItem = NavView.MenuItems[0];
         NavigateTo("Home");

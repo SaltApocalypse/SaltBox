@@ -40,12 +40,20 @@
                     IsExpanded="False">
                     <controls:SettingsExpander.Items>
                         <controls:SettingsCard
-                            Header="{x:Bind ViewModel.Lang.SettingsUpdateCheck, Mode=OneWay}"
-                            Description="{x:Bind ViewModel.UpdateStatusDescription, Mode=OneWay}">
+                            Header="{x:Bind ViewModel.Lang.SettingsUpdateCheck, Mode=OneWay}">
                             <Button
                                 Command="{x:Bind ViewModel.CheckForUpdatesCommand}"
                                 Content="{x:Bind ViewModel.Lang.SettingsUpdateCheckManual, Mode=OneWay}"
                                 IsEnabled="{x:Bind ViewModel.CanCheckUpdate, Mode=OneWay}" />
+                        </controls:SettingsCard>
+                        <controls:SettingsCard
+                            Visibility="{x:Bind ViewModel.ShowResultRow, Mode=OneWay}"
+                            Header="{x:Bind ViewModel.UpdateStatusDescription, Mode=OneWay}">
+                            <Button
+                                Command="{x:Bind ViewModel.DownloadAndInstallCommand}"
+                                Content="{x:Bind ViewModel.Lang.SettingsUpdateNowButton, Mode=OneWay}"
+                                Visibility="{x:Bind ViewModel.ShowUpdateActionButton, Mode=OneWay}"
+                                Style="{StaticResource AccentButtonStyle}" />
                         </controls:SettingsCard>
                     </controls:SettingsExpander.Items>
                 </controls:SettingsExpander>
@@ -54,15 +62,7 @@
                     IsOpen="{x:Bind ViewModel.ShowUpdateInfoBar, Mode=OneWay}"
                     Severity="{x:Bind ViewModel.UpdateInfoBarSeverity, Mode=OneWay}"
                     Message="{x:Bind ViewModel.UpdateInfoBarMessage, Mode=OneWay}"
-                    IsClosable="False">
-                    <InfoBar.ActionButton>
-                        <Button
-                            Command="{x:Bind ViewModel.DownloadAndInstallCommand}"
-                            Content="{x:Bind ViewModel.Lang.SettingsUpdateNowButton, Mode=OneWay}"
-                            Visibility="{x:Bind ViewModel.ShowUpdateActionButton, Mode=OneWay}"
-                            Style="{StaticResource AccentButtonStyle}" />
-                    </InfoBar.ActionButton>
-                </InfoBar>
+                    IsClosable="False" />
             </StackPanel>
 
             <StackPanel Spacing="12">

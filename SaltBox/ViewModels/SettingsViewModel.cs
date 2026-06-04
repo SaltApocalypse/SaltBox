@@ -15,7 +15,6 @@ public partial class SettingsViewModel : ObservableObject
     private readonly CultureService _culture;
     private readonly UpdateService _updateService;
     private readonly DeveloperModeService _developerModeService;
-    private bool _hasChecked;
 
     public SettingsViewModel(ThemeService themeService, CultureService culture, UpdateService updateService, DeveloperModeService developerModeService)
     {
@@ -57,7 +56,7 @@ public partial class SettingsViewModel : ObservableObject
             catch
             {
                 var v = Assembly.GetEntryAssembly()?.GetName()?.Version;
-                return v is not null ? $"v{v.Major}.{v.Minor}.{v.Build}" : "v0.2.7";
+                return v is not null ? $"v{v.Major}.{v.Minor}.{v.Build}" : "v0.2.8";
             }
         }
     }
@@ -74,7 +73,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         get
         {
-            if (!_hasChecked)
+            if (_updateService.Status == UpdateStatus.Idle)
                 return "";
             return _updateService.Status switch
             {
@@ -90,13 +89,12 @@ public partial class SettingsViewModel : ObservableObject
     {
         get
         {
-            if (!_hasChecked)
+            if (_updateService.Status == UpdateStatus.Idle)
                 return "";
             return _updateService.Status switch
             {
                 UpdateStatus.Checking => Lang.SettingsUpdateChecking,
                 UpdateStatus.UpToDate => Lang.SettingsUpdateUpToDate,
-                UpdateStatus.Available => string.Format(Lang.SettingsUpdateAvailable, _updateService.LatestVersion),
                 UpdateStatus.Downloading => Lang.SettingsUpdateDownloading,
                 UpdateStatus.ReadyToInstall => Lang.SettingsUpdateInstall,
                 UpdateStatus.Error => _updateService.StatusMessage,
@@ -109,20 +107,27 @@ public partial class SettingsViewModel : ObservableObject
     {
         get
         {
-            if (!_hasChecked)
+            if (_updateService.Status == UpdateStatus.Idle)
                 return InfoBarSeverity.Informational;
             return _updateService.Status switch
             {
                 UpdateStatus.UpToDate => InfoBarSeverity.Success,
-                UpdateStatus.Available => InfoBarSeverity.Informational,
-                UpdateStatus.ReadyToInstall => InfoBarSeverity.Informational,
                 UpdateStatus.Error => InfoBarSeverity.Error,
                 _ => InfoBarSeverity.Informational
             };
         }
     }
 
-    public bool ShowUpdateInfoBar => _hasChecked;
+    public bool ShowUpdateInfoBar => _updateService.Status switch
+    {
+        UpdateStatus.Checking => true,
+        UpdateStatus.Downloading => true,
+        UpdateStatus.UpToDate => true,
+        UpdateStatus.Error => true,
+        _ => false
+    };
+
+    public Visibility ShowResultRow => _updateService.Status is UpdateStatus.Available or UpdateStatus.ReadyToInstall ? Visibility.Visible : Visibility.Collapsed;
     public Visibility ShowUpdateActionButton => _updateService.Status is UpdateStatus.Available or UpdateStatus.ReadyToInstall ? Visibility.Visible : Visibility.Collapsed;
     public bool CanCheckUpdate => _updateService.CanCheck;
     public bool IsChecking => _updateService.Status == UpdateStatus.Checking;
@@ -172,6 +177,7 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(UpdateInfoBarMessage));
         OnPropertyChanged(nameof(UpdateInfoBarSeverity));
         OnPropertyChanged(nameof(ShowUpdateInfoBar));
+        OnPropertyChanged(nameof(ShowResultRow));
         OnPropertyChanged(nameof(ShowUpdateActionButton));
         OnPropertyChanged(nameof(CanCheckUpdate));
         OnPropertyChanged(nameof(IsChecking));
@@ -182,8 +188,6 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (!_updateService.CanCheck)
             return;
-        _hasChecked = true;
-        OnUpdateStatusChanged();
         await _updateService.CheckForUpdatesAsync();
     }
 
