@@ -40,6 +40,7 @@ public partial class CultureService : ObservableObject
             ["SettingsUpdateUpToDate"] = "You have the latest version",
             ["SettingsUpdateAvailable"] = "New version {0} available",
             ["SettingsUpdateNowButton"] = "Update now",
+            ["SettingsUpdateDownloadLink"] = "Download from GitHub",
             ["SettingsCurrentVersion"] = "Current version",
             ["ScreenshotDescription"] = "Global screenshot tool, triggered by shortcut key.",
             ["ScreenshotEnable"] = "Enable screenshot",
@@ -136,6 +137,7 @@ public partial class CultureService : ObservableObject
             ["SettingsUpdateUpToDate"] = "当前是最新版本",
             ["SettingsUpdateAvailable"] = "发现新版本 {0}",
             ["SettingsUpdateNowButton"] = "立即更新",
+            ["SettingsUpdateDownloadLink"] = "从 GitHub 下载",
             ["SettingsCurrentVersion"] = "当前版本",
             ["ScreenshotDescription"] = "全局的截图工具，使用快捷键触发。",
             ["ScreenshotEnable"] = "启用屏幕截图",
@@ -258,6 +260,7 @@ public partial class CultureService : ObservableObject
     public string SettingsUpdateUpToDate => _strings.GetValueOrDefault(nameof(SettingsUpdateUpToDate), "You have the latest version");
     public string SettingsUpdateAvailable => _strings.GetValueOrDefault(nameof(SettingsUpdateAvailable), "New version {0} available");
     public string SettingsUpdateNowButton => _strings.GetValueOrDefault(nameof(SettingsUpdateNowButton), "Update now");
+    public string SettingsUpdateDownloadLink => _strings.GetValueOrDefault(nameof(SettingsUpdateDownloadLink), "Download from GitHub");
     public string SettingsCurrentVersion => _strings.GetValueOrDefault(nameof(SettingsCurrentVersion), "Current version");
     public string ScreenshotDescription => _strings.GetValueOrDefault(nameof(ScreenshotDescription), "Global screenshot tool, triggered by shortcut key.");
     public string ScreenshotEnable => _strings.GetValueOrDefault(nameof(ScreenshotEnable), "Enable screenshot");

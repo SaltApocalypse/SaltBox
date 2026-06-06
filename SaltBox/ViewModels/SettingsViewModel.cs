@@ -56,7 +56,7 @@ public partial class SettingsViewModel : ObservableObject
             catch
             {
                 var v = Assembly.GetEntryAssembly()?.GetName()?.Version;
-                return v is not null ? $"v{v.Major}.{v.Minor}.{v.Build}" : "v0.2.10";
+                return v is not null ? $"v{v.Major}.{v.Minor}.{v.Build}" : "v0.2.12";
             }
         }
     }
@@ -78,8 +78,8 @@ public partial class SettingsViewModel : ObservableObject
             return _updateService.Status switch
             {
                 UpdateStatus.UpToDate => Lang.SettingsUpdateUpToDate,
-                UpdateStatus.Available => string.Format(Lang.SettingsUpdateAvailable, _updateService.LatestVersion),
-                UpdateStatus.ReadyToInstall => string.Format(Lang.SettingsUpdateAvailable, _updateService.LatestVersion),
+                UpdateStatus.Available => string.Format(Lang.HomeUpdateBanner, _updateService.CurrentVersion, _updateService.LatestVersion),
+                UpdateStatus.ReadyToInstall => string.Format(Lang.HomeUpdateBanner, _updateService.CurrentVersion, _updateService.LatestVersion),
                 _ => ""
             };
         }

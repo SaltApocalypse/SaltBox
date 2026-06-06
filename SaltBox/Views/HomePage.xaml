@@ -15,7 +15,9 @@
                 Message="{x:Bind ViewModel.UpdateBannerText, Mode=OneWay}"
                 Severity="Informational"
                 IsClosable="True"
-                IsIconVisible="True" />
+                IsIconVisible="True"
+                Background="Transparent"
+                Tapped="OnUpdateBannerTapped" />
 
             <TextBlock
                 Text="{x:Bind ViewModel.Lang.NavTools, Mode=OneWay}"
