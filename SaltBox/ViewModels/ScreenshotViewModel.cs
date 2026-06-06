@@ -358,6 +358,7 @@ public partial class ScreenshotViewModel : ObservableObject
             var builder = new AppNotificationBuilder()
                 .AddText(Lang.ScreenshotNotificationTitle)
                 .AddText(StatusMessage)
+                .AddArgument("action", "openScreenshotFolder")
                 .SetScenario(AppNotificationScenario.Urgent);
 
             if (NotificationMode == NotificationMode.Preview && imagePath != null)

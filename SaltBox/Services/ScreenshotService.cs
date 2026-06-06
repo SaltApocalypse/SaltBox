@@ -14,6 +14,10 @@ using Windows.Foundation;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
+using WinRT;
+using Vortice.Direct3D;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
 using SaltBox.Helpers;
 using SaltBox.ViewModels;
 
@@ -429,6 +433,7 @@ public class ScreenshotService
             var builder = new AppNotificationBuilder()
                 .AddText("SaltBox Screenshot")
                 .AddText(imagePath ?? "Capture failed")
+                .AddArgument("action", "openScreenshotFolder")
                 .SetScenario(AppNotificationScenario.Urgent);
 
             if (NotificationMode == NotificationMode.Preview && imagePath != null)
@@ -539,47 +544,58 @@ public class ScreenshotService
 
     public async Task<string?> CaptureScreenshotAsync(DisplayInfo display, string saveFolder)
     {
+        var captureId = Guid.NewGuid().ToString("N")[..8].ToUpper();
         Directory.CreateDirectory(saveFolder);
 
         var isHdr = await HdrHelper.IsDisplayHdrAsync(_uiDispatcher);
 
+        if (isHdr)
+            _log.Info($"[HDR:{captureId}] HDR display detected");
+        else
+            _log.Info($"[HDR:{captureId}] SDR display detected");
+
         // Try D3D capture first; fall back to GDI BitBlt if D3D is unavailable
         try
         {
-            return await CaptureWithD3DAsync(display, saveFolder, isHdr);
+            return await CaptureWithD3DAsync(display, saveFolder, isHdr, captureId);
         }
         catch (Exception ex)
         {
-            _log.Warn($"D3D capture failed ({ex.Message}), falling back to GDI");
-            return await CaptureWithGDIAsync(display, saveFolder);
+            _log.Warn($"[D3D:{captureId}] D3D capture failed ({ex.Message})");
+            _log.Info($"[GDI:{captureId}] Falling back to GDI capture");
+            return await CaptureWithGDIAsync(display, saveFolder, captureId);
         }
     }
 
-    private async Task<string?> CaptureWithD3DAsync(DisplayInfo display, string saveFolder, bool isHdr)
+    private async Task<string?> CaptureWithD3DAsync(DisplayInfo display, string saveFolder, bool isHdr, string captureId)
     {
         Direct3D11CaptureFramePool? framePool = null;
         GraphicsCaptureSession? session = null;
 
         try
         {
-            var d3dDevice = CreateDirect3DDevice();
+            var d3dDevice = CreateDirect3DDevice(captureId);
+
+            _log.Debug($"[Capture:{captureId}] Creating GraphicsCaptureItem");
             var captureItem = CreateCaptureItemForMonitor(display.HMonitor);
+            _log.Debug($"[Capture:{captureId}] GraphicsCaptureItem created (size: {captureItem.Size.Width}x{captureItem.Size.Height})");
 
             // Use FP16 pixel format on HDR displays to avoid pixel overclipping (washed-out colors)
             var pixelFormat = isHdr
                 ? DirectXPixelFormat.R16G16B16A16Float
                 : DirectXPixelFormat.B8G8R8A8UIntNormalized;
 
-            if (isHdr)
-                _log.Info("HDR display detected — capturing with FP16 format");
+            _log.Debug($"[Capture:{captureId}] Creating FramePool (format: {pixelFormat})");
 
             framePool = Direct3D11CaptureFramePool.Create(
                 d3dDevice,
                 pixelFormat,
                 2,
                 captureItem.Size);
+            _log.Info($"[Capture:{captureId}] FramePool created");
 
             session = framePool.CreateCaptureSession(captureItem);
+            _log.Info($"[Capture:{captureId}] Session started");
 
             var tcs = new TaskCompletionSource<Direct3D11CaptureFrame>();
 
@@ -598,14 +614,16 @@ public class ScreenshotService
             framePool.FrameArrived += handler;
             session.StartCapture();
 
+            _log.Debug($"[Capture:{captureId}] Waiting for frame");
             var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(5000));
             if (completedTask != tcs.Task)
             {
-                _log.Warn("Screenshot timed out — no frame within 5s");
+                _log.Warn($"[Capture:{captureId}] Frame timeout — no frame within 5s");
                 throw new TimeoutException("No frame received within 5 seconds");
             }
 
             using var frame = await tcs.Task;
+            _log.Info($"[Capture:{captureId}] Frame received");
 
             var softwareBitmap = await SoftwareBitmap.CreateCopyFromSurfaceAsync(
                 frame.Surface, BitmapAlphaMode.Ignore);
@@ -613,11 +631,17 @@ public class ScreenshotService
             // Check if the SoftwareBitmap preserved FP16 format (HDR path)
             if (isHdr && softwareBitmap.BitmapPixelFormat != BitmapPixelFormat.Bgra8)
             {
-                _log.Info("Converting FP16 HDR frame to SDR with ACES tone mapping");
+                _log.Info($"[HDR:{captureId}] FP16 frame detected — applying ACES tone mapping");
                 var size = captureItem.Size;
                 var pixels = HdrHelper.ConvertFp16ToSdrPixels(softwareBitmap, size.Width, size.Height);
+                _log.Info($"[HDR:{captureId}] SDR conversion complete");
                 return await SavePixelsAsync(pixels, size.Width, size.Height, saveFolder);
             }
+
+            if (isHdr)
+                _log.Info($"[HDR:{captureId}] HDR display detected but frame is SDR — tone mapping skipped");
+            else
+                _log.Info($"[HDR:{captureId}] SDR display — tone mapping skipped");
 
             return await SaveSoftwareBitmapAsync(softwareBitmap, saveFolder);
         }
@@ -628,11 +652,12 @@ public class ScreenshotService
         }
     }
 
-    private async Task<string?> CaptureWithGDIAsync(DisplayInfo display, string saveFolder)
+    private async Task<string?> CaptureWithGDIAsync(DisplayInfo display, string saveFolder, string captureId)
     {
+        _log.Info($"[GDI:{captureId}] Starting GDI capture");
         var hdcScreen = CreateDC("DISPLAY", null, null, IntPtr.Zero);
         if (hdcScreen == IntPtr.Zero)
-            throw new InvalidOperationException("GDI: CreateDC failed");
+            throw new InvalidOperationException($"GDI: CreateDC failed (captureId={captureId})");
 
         try
         {
@@ -674,6 +699,7 @@ public class ScreenshotService
                     for (int i = 3; i < pixels.Length; i += 4)
                         pixels[i] = 255;
 
+                    _log.Info($"[GDI:{captureId}] Capture completed");
                     return await SavePixelsAsync(pixels, display.Width, display.Height, saveFolder);
                 }
                 finally
@@ -726,80 +752,91 @@ public class ScreenshotService
         return file.Path;
     }
 
-    private static IDirect3DDevice CreateDirect3DDevice()
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int CreateDirect3DDeviceBridgeDelegate(IntPtr dxgiDevice, out IntPtr graphicsDevice);
+
+    private static IDirect3DDevice CreateDirect3DDevice(string captureId)
     {
-        // Try HARDWARE driver first, fall back to WARP (software) if unavailable
-        try
+        (DriverType Driver, string Name)[] drivers =
+        [
+            (DriverType.Hardware, "Hardware"),
+            (DriverType.Warp, "WARP"),
+        ];
+
+        Exception? lastException = null;
+
+        foreach (var (driverType, driverName) in drivers)
         {
-            return CreateD3DDevice(1); // D3D_DRIVER_TYPE_HARDWARE
+            try
+            {
+                Log.Debug($"[D3D:{captureId}] Creating {driverName} device");
+                var featureLevels = new[] { FeatureLevel.Level_11_0, FeatureLevel.Level_10_1, FeatureLevel.Level_10_0 };
+                D3D11.D3D11CreateDevice(
+                    null,
+                    driverType,
+                    DeviceCreationFlags.BgraSupport,
+                    featureLevels,
+                    out ID3D11Device? d3dDevice,
+                    out FeatureLevel selectedLevel,
+                    out ID3D11DeviceContext? context).CheckError();
+                context?.Dispose();
+                Log.Debug($"[D3D:{captureId}] {driverName} device created (feature level: {selectedLevel})");
+
+                Log.Debug($"[DXGI:{captureId}] Querying IDXGIDevice");
+                var dxgiDevice = d3dDevice.QueryInterface<IDXGIDevice>();
+                Log.Debug($"[DXGI:{captureId}] IDXGIDevice acquired");
+
+                Log.Debug($"[WinRT:{captureId}] Creating IDirect3DDevice via CreateDirect3D11DeviceFromDXGIDevice (D3D11.dll)");
+
+                var d3d11Handle = GetModuleHandle("d3d11.dll");
+                if (d3d11Handle == IntPtr.Zero)
+                    throw new InvalidOperationException("d3d11.dll not loaded in process");
+
+                var bridgeExport = NativeLibrary.GetExport(d3d11Handle, "CreateDirect3D11DeviceFromDXGIDevice");
+                var bridgeFunc = Marshal.GetDelegateForFunctionPointer<CreateDirect3DDeviceBridgeDelegate>(bridgeExport);
+
+                var bridgeHr = bridgeFunc(dxgiDevice.NativePointer, out var nativeDevice);
+                if (bridgeHr < 0)
+                    Marshal.ThrowExceptionForHR(bridgeHr);
+
+                var device = MarshalInspectable<IDirect3DDevice>.FromAbi(nativeDevice);
+
+                Marshal.Release(nativeDevice);
+
+                Log.Debug($"[WinRT:{captureId}] IDirect3DDevice created");
+                return device;
+            }
+            catch (Exception ex) when (driverType == DriverType.Hardware)
+            {
+                lastException = ex;
+                Log.Warning(ex, $"[D3D:{captureId}] Hardware device creation failed");
+                Log.Information($"[D3D:{captureId}] Falling back to WARP");
+            }
         }
-        catch (Exception ex)
-        {
-            Log.Warning($"Hardware D3D device failed ({ex.Message}), falling back to WARP");
-            return CreateD3DDevice(2); // D3D_DRIVER_TYPE_WARP
-        }
-    }
 
-    private static IDirect3DDevice CreateD3DDevice(int driverType)
-    {
-        // Explicit feature level array — some systems fail with null/0 (DXGI_ERROR_UNSUPPORTED)
-        var featureLevels = new[] { 0xB000, 0xA100, 0xA000, 0x9300, 0x9200, 0x9100 };
-        var flHandle = GCHandle.Alloc(featureLevels, GCHandleType.Pinned);
-
-        int hr;
-        IntPtr d3dDevice;
-        IntPtr context;
-        try
-        {
-            hr = D3D11CreateDevice(
-                IntPtr.Zero,
-                driverType,
-                IntPtr.Zero,
-                0x20,
-                flHandle.AddrOfPinnedObject(),
-                (uint)featureLevels.Length,
-                7,
-                out d3dDevice,
-                out _,
-                out context);
-        }
-        finally
-        {
-            flHandle.Free();
-        }
-
-        if (hr < 0)
-            throw new InvalidOperationException(
-                $"D3D11CreateDevice failed (driverType={driverType}): 0x{hr:X8}",
-                Marshal.GetExceptionForHR(hr));
-        Marshal.Release(context);
-
-        var dxgiGuid = IDXGIDeviceGuid;
-        hr = Marshal.QueryInterface(d3dDevice, ref dxgiGuid, out var dxgiDevice);
-        Marshal.Release(d3dDevice);
-        if (hr < 0)
-            throw new InvalidOperationException(
-                $"QueryInterface(IDXGIDevice) failed: 0x{hr:X8}",
-                Marshal.GetExceptionForHR(hr));
-
-        hr = CreateDirect3D11DeviceFromDXGIDevice(dxgiDevice, out var inspectable);
-        Marshal.Release(dxgiDevice);
-        if (hr < 0)
-            throw new InvalidOperationException(
-                $"CreateDirect3D11DeviceFromDXGIDevice failed: 0x{hr:X8}",
-                Marshal.GetExceptionForHR(hr));
-
-        return (IDirect3DDevice)Marshal.GetObjectForIUnknown(inspectable);
+        Log.Error(lastException, $"[D3D:{captureId}] All device creation failed");
+        throw lastException ?? new InvalidOperationException("D3D device creation failed");
     }
 
     private static GraphicsCaptureItem CreateCaptureItemForMonitor(nint hMonitor)
     {
+        Log.Debug("CreateCaptureItemForMonitor: hMonitor=0x{HMonitor:X16}", hMonitor);
+
         var factory = GetCaptureItemFactory();
-        var capGuid = GraphicsCaptureItemGuid;
-        var hr = factory.CreateForMonitor(hMonitor, ref capGuid, out nint ptr);
-        if (hr < 0)
-            Marshal.ThrowExceptionForHR(hr);
-        return GraphicsCaptureItem.FromAbi(ptr);
+
+        try
+        {
+            var captureGuid = GraphicsCaptureItemGuid;
+            var ptr = factory.CreateForMonitor(hMonitor, ref captureGuid);
+            var item = GraphicsCaptureItem.FromAbi(ptr);
+            Marshal.Release(ptr);
+            return item;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "CreateForMonitor FAILED");
+            throw;
+        }
     }
 
     private static IGraphicsCaptureItemInterop GetCaptureItemFactory()
@@ -831,13 +868,13 @@ public class ScreenshotService
     [ComImport]
     [Guid("3628E81B-3CAC-4C60-B7F4-23CE0E0C3356")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [ComVisible(true)]
     private interface IGraphicsCaptureItemInterop
     {
-        int CreateForMonitor(nint hMonitor, ref Guid riid, out nint ppv);
-        int CreateForWindow(nint hwnd, ref Guid riid, out nint ppv);
+        IntPtr CreateForWindow([In] IntPtr window, [In] ref Guid iid);
+        IntPtr CreateForMonitor([In] IntPtr monitor, [In] ref Guid iid);
     }
 
-    private static readonly Guid IDXGIDeviceGuid = new("7EC71627-C1F5-44A2-B24B-11684F3E92EB");
     private static readonly Guid GraphicsCaptureItemGuid = new("79C3F95B-31F7-4EC2-A464-632EF5D30760");
 
     [DllImport("combase.dll")]
@@ -849,22 +886,6 @@ public class ScreenshotService
     [DllImport("combase.dll")]
     private static extern void WindowsDeleteString(IntPtr hString);
 
-    [DllImport("d3d11.dll")]
-    private static extern int D3D11CreateDevice(
-        IntPtr pAdapter,
-        int DriverType,
-        IntPtr Software,
-        uint Flags,
-        IntPtr pFeatureLevels,
-        uint FeatureLevels,
-        uint SDKVersion,
-        out IntPtr ppDevice,
-        out int pFeatureLevel,
-        out IntPtr ppImmediateContext);
-
-    [DllImport("windows.graphics.directx.direct3d11.dll")]
-    private static extern int CreateDirect3D11DeviceFromDXGIDevice(IntPtr dxgiDevice, out IntPtr graphicsDevice);
-
     private const int ENUM_CURRENT_SETTINGS = -1;
     private const uint DISPLAY_DEVICE_ATTACHED = 0x1;
     private const uint DISPLAY_DEVICE_PRIMARY = 0x4;
@@ -872,6 +893,20 @@ public class ScreenshotService
 
     [DllImport("user32.dll")]
     private static extern nint MonitorFromPoint(POINT pt, uint dwFlags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern bool GetMonitorInfoW(nint hMonitor, ref MONITORINFOEX lpmi);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct MONITORINFOEX
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+        public string szDevice;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT { public int x; public int y; }
