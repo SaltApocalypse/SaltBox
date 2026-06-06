@@ -22,12 +22,6 @@ jobs:
         run: |
           $version = "${{ github.ref_name }}" -replace "^v", ""
           echo "version=$version" >> $env:GITHUB_OUTPUT
-      - name: Inject GitHub token for update checks
-        shell: pwsh
-        run: |
-          $json = Get-Content "SaltBox\Config\appsettings.json" -Raw | ConvertFrom-Json
-          $json.Update.GithubAccessToken = "${{ secrets.GITHUB_TOKEN }}"
-          $json | ConvertTo-Json -Depth 10 | Set-Content "SaltBox\Config\appsettings.json"
       - name: Publish
         run: |
           dotnet publish SaltBox/SaltBox.csproj `

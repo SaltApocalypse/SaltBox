@@ -78,14 +78,13 @@ public partial class UpdateService : ObservableObject
         {
             case "github":
                 var repoUrl = section["GithubRepoUrl"];
-                var token = section["GithubAccessToken"] ?? "";
                 var pre = bool.TryParse(section["GithubPrerelease"], out var prerelease) && prerelease;
-                _log.Debug($"ConfigureFromConfig: github repoUrl = {repoUrl}, prerelease = {pre}, token set = {!string.IsNullOrEmpty(token)}");
+                _log.Debug($"ConfigureFromConfig: github repoUrl = {repoUrl}, prerelease = {pre}");
 
                 if (!string.IsNullOrEmpty(repoUrl))
                 {
-                    _mgr = new UpdateManager(new GithubSource(repoUrl, token, pre));
-                    _log.Debug("ConfigureFromConfig: UpdateManager created with GithubSource");
+                    _mgr = new UpdateManager(new GithubSource(repoUrl, "", pre));
+                    _log.Debug("ConfigureFromConfig: UpdateManager created with GithubSource (anonymous)");
                 }
                 else
                 {
