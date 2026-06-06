@@ -180,16 +180,101 @@ public sealed partial class HomePage : Page
   - Button: `ScreenshotViewModel.SendNotification()` (transient ViewModel).
 - Add an `InfoBar` in the settings page to remind users to enable system notifications when notification mode is not `None`.
 
-# Logging Rules
+# Logging Guidelines
 
-Use Serilog only.
+## Core Rules
 
+- Use Serilog exclusively — no other logging frameworks.
+- All services MUST use the injected `LogService` (`private readonly LogService _log`).
+- Static helper classes may use `Serilog.Log.ForContext<T>()` or `Serilog.Log` directly only when DI injection is impractical.
+- Logging must be initialized in `App` static constructor before the DI host is built (see `App.xaml.cs` `InitLogging()`).
 - All errors and important operations must be logged.
-- Log path: `{ApplicationData.Current.LocalFolder.Path}/Logs/` (i.e. `%LOCALAPPDATA%\SaltBox\SaltBox\LocalState\Logs\` when sparse package registered).
-- Fallback path (dev without sparse package): `%TEMP%\SaltBox\Logs\`.
+- No temporary diagnostic logs may be committed — cleanup all investigation logs after feature completion.
+
+## Log Level Usage
+
+### Information — 用户可感知的行为
+
+Use for:
+- Application lifecycle: started, shut down
+- User-initiated operations: capture, shortcut change, update triggered
+- Feature completion: screenshot saved, update applied
+- Status changes: theme changed, hotkey registered
+
+Examples:
+- `"Application started"`
+- `"Hotkey triggered — capturing {display} to {path}"`
+- `"[Capture:{captureId}] FramePool created"`
+- `"[HDR:{captureId}] HDR display detected"`
+- `"Screenshot saved: {path}"`
+- `"Global hotkey registered (modifier={mod}, key={key})"`
+- `"MainWindow loaded"`
+
+### Warning — 可恢复的异常和自动降级
+
+Use for:
+- Fallback paths activated: hotkey fallback from RegisterHotKey → low-level hook, D3D → GDI
+- Feature unavailable but app continues: notification unsupported, identity package missing
+- Configuration anomalies: setting load failed, update source not configured
+
+Examples:
+- `"RegisterHotKey failed, falling back to low-level hook"`
+- `"[D3D:{captureId}] D3D capture failed ({message})"`
+- `"Notification show failed: {message}"`
+- `"Failed to load setting: {key}"`
+
+### Debug — 开发调试信息
+
+Use for:
+- COM/WinRT object creation and ABI bridging details
+- D3D/DXGI device creation process
+- Graphics pipeline object lifecycle: FramePool, Session, Frame
+- Update flow diagnostics: version detection, check cycle, download status
+- Intermediate states and performance timing
+
+Examples:
+- `"[D3D:{captureId}] Creating Hardware device"`
+- `"[DXGI:{captureId}] IDXGIDevice acquired"`
+- `"[Capture:{captureId}] Waiting for frame"`
+- `"CheckForUpdatesAsync: update available: Current {v} -> Latest {v}"`
+
+### Error — 功能失败和未处理异常
+
+Use for:
+- Operations that fail entirely: capture failure, update failure, notification failure
+- Unhandled exceptions caught at boundary
+- COM/WinRT interop failures
+
+Examples:
+- `"Hotkey capture failed: {message}"`
+- `"CreateForMonitor FAILED"`
+- `"Update download failed: {message}"`
+- `"Screenshot capture threw: {detail}"`
+
+## Log Content Principles
+
+1. **面向用户的日志使用 Information** — 用户在日志文件中应能看到有意义的活动记录。
+2. **面向开发者的诊断日志使用 Debug** — 排查问题时的第一信息来源，默认不显示给用户。
+3. **不要输出原始指针地址** — 如 `ptr=0x...` 无实际排查价值。
+4. **不要输出托管对象类型全名和程序集信息** — 如 `Device Type=...`、`Device Assembly=...`。
+5. **不要在日志中泄露安全敏感信息** — 如注册表值、文件路径含用户名等（但应用自身的路径可以）。
+6. **上下文标签优先于全量信息** — 使用 `[Component:OperationId] message` 格式（如 `[Capture:ABC12345] FramePool created` 而非 `Direct3D11CaptureFramePool created with device argument`）。
+7. **每条日志应包含足够的上下文** — 对于捕获操作，带上 `captureId`；对于更新操作，带上 `CurrentVersion`/`LatestVersion`。
+8. **日志不应包含换行符** — 保持单行输出，便于 grep。
+
+## 日志路径
+
+- Primary: `{ApplicationData.Current.LocalFolder.Path}/Logs/` (i.e. `%LOCALAPPDATA%\SaltBox\SaltBox\LocalState\Logs\` when sparse package registered).
+- Fallback (dev without sparse package): `%TEMP%\SaltBox\Logs\`.
 - Filename format: `log-yyyyMMdd.txt`.
 - Rolling interval: daily, 30 days retention.
-- Serilog is initialized in `App` static constructor before the DI host is built.
+
+## 开发注意事项
+
+- 在添加新功能时，优先使用正确的日志等级（不是所有日志都是 Information）。
+- 功能完成后，必须审查并清理排查阶段添加的临时日志（标记所有临时日志为 TODO 或删除）。
+- 在提交 PR 前，使用 `git diff` 检查是否还有临时的 `Log.Debug("testing..."`) 类日志。
+- 对于复杂功能（如截图），使用 `captureId` 作为上下文标签以关联同一操作的所有日志。
 
 # Velopack Update Rules
 

@@ -3,9 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.Windows.AppLifecycle;
 using Microsoft.Windows.AppNotifications;
 using SaltBox.Services;
 using SaltBox.Views;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace SaltBox;
@@ -74,7 +76,39 @@ public sealed partial class MainWindow : Window
         };
 
         if (AppNotificationManager.IsSupported())
+        {
             try { AppNotificationManager.Default.Register(); } catch (Exception ex) { _log.Warn($"Notification registration failed: {ex.Message}"); }
+
+            try
+            {
+                AppInstance.GetCurrent().Activated += (_, args) =>
+                {
+                    if (args.Data is AppNotificationActivatedEventArgs notificationArgs)
+                    {
+                        if (notificationArgs.Arguments.TryGetValue("action", out var action) && action == "openScreenshotFolder")
+                        {
+                            var path = _screenshot?.SavePath;
+                            if (string.IsNullOrEmpty(path))
+                                path = Path.Combine(
+                                    Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Screenshots");
+                            try
+                            {
+                                Process.Start("explorer.exe", path);
+                            }
+                            catch (Exception ex)
+                            {
+                                _log.Warn($"Failed to open screenshot folder: {ex.Message}");
+                            }
+                        }
+                    }
+                };
+                _log.Debug("Notification activation handler registered");
+            }
+            catch (Exception ex)
+            {
+                _log.Warn($"Failed to register notification activation handler: {ex.Message}");
+            }
+        }
 
         _screenshot = _services.GetRequiredService<ScreenshotService>();
         _screenshot.RegisterGlobalHotkey();
