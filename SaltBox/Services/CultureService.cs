@@ -105,6 +105,13 @@ public partial class CultureService : ObservableObject
             ["DevExportFailed"] = "Export failed",
             ["DevOpenLogFolder"] = "Open folder",
             ["HomeUpdateBanner"] = "New version v{0} -> v{1} available",
+            ["NavFileManagement"] = "File Management",
+            ["NavFileExtractor"] = "File Extractor",
+            ["FileExtractorDescription"] = "Extract all files from subdirectories to the root folder. Folders are preserved.",
+            ["FileExtractorEnable"] = "Enable File Extractor",
+            ["FileExtractorEnableDescription"] = "Add a right-click menu on folders to extract files",
+            ["FileExtractorEnableOn"] = "On",
+            ["FileExtractorEnableOff"] = "Off",
         },
         ["zh-CN"] = new()
         {
@@ -202,6 +209,13 @@ public partial class CultureService : ObservableObject
             ["DevExportFailed"] = "导出失败",
             ["DevOpenLogFolder"] = "打开文件夹",
             ["HomeUpdateBanner"] = "发现新版本 v{0} -> v{1}",
+            ["NavFileManagement"] = "文件管理",
+            ["NavFileExtractor"] = "文件提取",
+            ["FileExtractorDescription"] = "将子目录中的所有文件提取到根目录，保留原有文件夹。",
+            ["FileExtractorEnable"] = "启用文件提取",
+            ["FileExtractorEnableDescription"] = "在文件夹右键菜单中添加文件提取功能",
+            ["FileExtractorEnableOn"] = "开",
+            ["FileExtractorEnableOff"] = "关",
         }
     };
 
@@ -325,6 +339,13 @@ public partial class CultureService : ObservableObject
     public string DevExportFailed => _strings.GetValueOrDefault(nameof(DevExportFailed), "Export failed");
     public string DevOpenLogFolder => _strings.GetValueOrDefault(nameof(DevOpenLogFolder), "Open folder");
     public string HomeUpdateBanner => _strings.GetValueOrDefault(nameof(HomeUpdateBanner), "New version v{0} -> v{1} available");
+    public string NavFileManagement => _strings.GetValueOrDefault(nameof(NavFileManagement), "File Management");
+    public string NavFileExtractor => _strings.GetValueOrDefault(nameof(NavFileExtractor), "File Extractor");
+    public string FileExtractorDescription => _strings.GetValueOrDefault(nameof(FileExtractorDescription), "Extract all files from subdirectories to the root folder.");
+    public string FileExtractorEnable => _strings.GetValueOrDefault(nameof(FileExtractorEnable), "Enable File Extractor");
+    public string FileExtractorEnableDescription => _strings.GetValueOrDefault(nameof(FileExtractorEnableDescription), "Add a right-click menu on folders to extract files");
+    public string FileExtractorEnableOn => _strings.GetValueOrDefault(nameof(FileExtractorEnableOn), "On");
+    public string FileExtractorEnableOff => _strings.GetValueOrDefault(nameof(FileExtractorEnableOff), "Off");
 
     public void SetCulture(string code)
     {

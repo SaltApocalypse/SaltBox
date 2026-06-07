@@ -41,6 +41,11 @@
                 <controls:NavigationViewItem
                     Tag="Screenshot" Icon="Camera"
                     Content="{x:Bind Lang.NavScreenshot, Mode=OneWay}" />
+                <controls:NavigationViewItemHeader
+                    Content="{x:Bind Lang.NavFileManagement, Mode=OneWay}" />
+                <controls:NavigationViewItem
+                    Tag="FileExtractor" Icon="Folder"
+                    Content="{x:Bind Lang.NavFileExtractor, Mode=OneWay}" />
             </controls:NavigationView.MenuItems>
 
             <controls:NavigationView.FooterMenuItems>

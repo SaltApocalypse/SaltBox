@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Serilog;
 using Windows.Management.Deployment;
 using Windows.Storage;
+using SaltBox.Modules.FileExtractor;
 using SaltBox.Services;
 using SaltBox.ViewModels;
 using SaltBox.Views;
@@ -120,11 +121,15 @@ public partial class App : Application
                 services.AddSingleton<MainViewModel>();
                 services.AddSingleton<InMemoryLogSink>(_ => _memorySink!);
                 services.AddSingleton<DeveloperModeService>();
+                services.AddSingleton<ContextMenuManager>();
+                services.AddSingleton<FileExtractorService>();
                 services.AddTransient<DeveloperModeViewModel>();
                 services.AddTransient<DeveloperModePage>();
                 services.AddTransient<HomeViewModel>();
                 services.AddTransient<ScreenshotViewModel>();
                 services.AddTransient<SettingsViewModel>();
+                services.AddTransient<FileExtractorViewModel>();
+                services.AddTransient<FileExtractorPage>();
                 services.AddTransient<HomePage>();
                 services.AddTransient<ScreenshotPage>();
                 services.AddTransient<SettingsPage>();
@@ -134,6 +139,26 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // Handle command-line file extraction before single-instance check
+        var cmdArgs = Environment.GetCommandLineArgs();
+        for (int i = 1; i < cmdArgs.Length; i++)
+        {
+            if (string.Equals(cmdArgs[i], "--extract-files", StringComparison.OrdinalIgnoreCase) && i + 1 < cmdArgs.Length)
+            {
+                var folderPath = cmdArgs[i + 1];
+                try
+                {
+                    var extractor = _host.Services.GetRequiredService<FileExtractorService>();
+                    extractor.ExtractFiles(folderPath);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "File extraction failed for {Folder}", folderPath);
+                }
+                return;
+            }
+        }
+
         if (!_isFirstInstance)
         {
             ActivateExistingInstance();
@@ -157,6 +182,10 @@ public partial class App : Application
             var updater = _host.Services.GetRequiredService<UpdateService>();
             updater.ConfigureFromConfig(config);
         }
+
+        // Apply startup settings for FileExtractor (register/unregister context menu)
+        var fileExtractor = _host.Services.GetRequiredService<FileExtractorService>();
+        fileExtractor.ApplyStartupSetting();
 
         var window = _host.Services.GetRequiredService<MainWindow>();
         window.Activate();

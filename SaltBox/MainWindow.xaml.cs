@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.AppLifecycle;
 using Microsoft.Windows.AppNotifications;
+using SaltBox.Modules.FileExtractor;
 using SaltBox.Services;
 using SaltBox.Views;
 using System.Diagnostics;
@@ -69,6 +70,7 @@ public sealed partial class MainWindow : Window
             {
                 "Home" => Lang.NavHome,
                 "Screenshot" => Lang.NavScreenshot,
+                "FileExtractor" => Lang.NavFileExtractor,
                 "DeveloperMode" => Lang.NavDeveloperMode,
                 "Settings" => Lang.SettingsTitle,
                 _ => ""
@@ -195,6 +197,7 @@ public sealed partial class MainWindow : Window
         {
             "Home" => typeof(HomePage),
             "Screenshot" => typeof(ScreenshotPage),
+            "FileExtractor" => typeof(FileExtractorPage),
             "DeveloperMode" => typeof(DeveloperModePage),
             "Settings" => typeof(SettingsPage),
             _ => null
@@ -213,6 +216,7 @@ public sealed partial class MainWindow : Window
         {
             "Home" => Lang.NavHome,
             "Screenshot" => Lang.NavScreenshot,
+            "FileExtractor" => Lang.NavFileExtractor,
             "DeveloperMode" => Lang.NavDeveloperMode,
             "Settings" => Lang.SettingsTitle,
             _ => ""

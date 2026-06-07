@@ -1,0 +1,28 @@
+<Page
+    x:Class="SaltBox.Modules.FileExtractor.FileExtractorPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SaltBox.Modules.FileExtractor"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls">
+
+    <ScrollViewer>
+        <StackPanel Spacing="24" Margin="36,36,36,24">
+
+            <TextBlock
+                Text="{x:Bind ViewModel.Lang.FileExtractorDescription, Mode=OneWay}"
+                Style="{StaticResource BodyTextBlockStyle}"
+                TextWrapping="Wrap" />
+
+            <controls:SettingsCard
+                Header="{x:Bind ViewModel.Lang.FileExtractorEnable, Mode=OneWay}"
+                Description="{x:Bind ViewModel.Lang.FileExtractorEnableDescription, Mode=OneWay}">
+                <ToggleSwitch
+                    IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
+                    OnContent="{x:Bind ViewModel.Lang.FileExtractorEnableOn, Mode=OneWay}"
+                    OffContent="{x:Bind ViewModel.Lang.FileExtractorEnableOff, Mode=OneWay}"
+                    HorizontalAlignment="Right" />
+            </controls:SettingsCard>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>
