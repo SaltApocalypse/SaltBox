@@ -87,19 +87,35 @@ public sealed partial class MainWindow : Window
                 {
                     if (args.Data is AppNotificationActivatedEventArgs notificationArgs)
                     {
-                        if (notificationArgs.Arguments.TryGetValue("action", out var action) && action == "openScreenshotFolder")
+                        if (notificationArgs.Arguments.TryGetValue("action", out var action))
                         {
-                            var path = _screenshot?.SavePath;
-                            if (string.IsNullOrEmpty(path))
-                                path = Path.Combine(
-                                    Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Screenshots");
-                            try
+                            if (action == "openScreenshotFolder")
                             {
-                                Process.Start("explorer.exe", path);
+                                var path = _screenshot?.SavePath;
+                                if (string.IsNullOrEmpty(path))
+                                    path = Path.Combine(
+                                        Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Screenshots");
+                                try
+                                {
+                                    Process.Start("explorer.exe", path);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _log.Warn($"Failed to open screenshot folder: {ex.Message}");
+                                }
                             }
-                            catch (Exception ex)
+                            else if (action == "openFileExtractorFolder"
+                                     && notificationArgs.Arguments.TryGetValue("folderPath", out var folderPath)
+                                     && !string.IsNullOrEmpty(folderPath))
                             {
-                                _log.Warn($"Failed to open screenshot folder: {ex.Message}");
+                                try
+                                {
+                                    Process.Start("explorer.exe", folderPath);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _log.Warn($"Failed to open file extraction folder: {ex.Message}");
+                                }
                             }
                         }
                     }

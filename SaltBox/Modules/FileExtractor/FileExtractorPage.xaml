@@ -23,6 +23,31 @@
                     HorizontalAlignment="Right" />
             </controls:SettingsCard>
 
+            <StackPanel Spacing="12">
+                <TextBlock
+                    Text="{x:Bind ViewModel.Lang.FileExtractorConfig, Mode=OneWay}"
+                    Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                <StackPanel Spacing="0">
+                    <controls:SettingsCard
+                    IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
+                    Header="{x:Bind ViewModel.Lang.FileExtractorNotificationMode, Mode=OneWay}">
+                    <ComboBox
+                        SelectedIndex="{x:Bind ViewModel.NotificationModeIndex, Mode=TwoWay}"
+                        MinWidth="140"
+                        HorizontalAlignment="Right">
+                        <ComboBoxItem Content="{x:Bind ViewModel.Lang.FileExtractorNotificationNone, Mode=OneWay}" />
+                        <ComboBoxItem Content="{x:Bind ViewModel.Lang.FileExtractorNotificationText, Mode=OneWay}" />
+                    </ComboBox>
+                </controls:SettingsCard>
+                <InfoBar
+                    Severity="Informational"
+                    IsClosable="False"
+                    IsOpen="{x:Bind ViewModel.HasNotificationHint, Mode=OneWay}"
+                    Message="{x:Bind ViewModel.Lang.FileExtractorNotificationSystemHint, Mode=OneWay}" />
+                </StackPanel>
+            </StackPanel>
+
         </StackPanel>
     </ScrollViewer>
 </Page>

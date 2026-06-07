@@ -1,3 +1,5 @@
+using Microsoft.Windows.AppNotifications;
+using Microsoft.Windows.AppNotifications.Builder;
 using SaltBox.Services;
 using Windows.Storage;
 
@@ -8,14 +10,19 @@ public class FileExtractorService
     private const string SettingKey = "EnableFileExtractor";
     private static readonly string SettingsFallbackPath =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SaltBox", "Settings", "FileExtractor.txt");
+    private const string NotificationModeSettingKey = "FileExtractorNotificationMode";
+    private static readonly string NotificationModeFallbackPath =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SaltBox", "Settings", "FileExtractorNotificationMode.txt");
 
     private readonly LogService _log;
     private readonly ContextMenuManager _menuManager;
+    private readonly CultureService _lang;
 
-    public FileExtractorService(LogService log, ContextMenuManager menuManager)
+    public FileExtractorService(LogService log, ContextMenuManager menuManager, CultureService lang)
     {
         _log = log;
         _menuManager = menuManager;
+        _lang = lang;
     }
 
     public bool IsEnabled
@@ -67,7 +74,8 @@ public class FileExtractorService
         _log.Info($"Starting file extraction for: {rootFolderPath}");
 
         var subDirs = Directory.GetDirectories(rootFolderPath, "*", SearchOption.AllDirectories);
-        var totalMoved = 0;
+        var successCount = 0;
+        var failedCount = 0;
 
         foreach (var dir in subDirs)
         {
@@ -83,16 +91,79 @@ public class FileExtractorService
                 try
                 {
                     File.Move(filePath, destPath);
-                    totalMoved++;
+                    successCount++;
                 }
                 catch (Exception ex)
                 {
                     _log.Error($"Failed to move file '{filePath}': {ex.Message}");
+                    failedCount++;
                 }
             }
         }
 
-        _log.Info($"File extraction completed for: {rootFolderPath}, {totalMoved} files moved");
+        _log.Info($"File extraction completed for: {rootFolderPath}, {successCount} moved, {failedCount} failed");
+        TrySendNotification(rootFolderPath, successCount, failedCount);
+    }
+
+    private void TrySendNotification(string rootFolderPath, int success, int failed)
+    {
+        if (LoadNotificationModeValue() == 0)
+            return;
+
+        if (!AppNotificationManager.IsSupported())
+            return;
+
+        try
+        {
+            var folderName = Path.GetFileName(rootFolderPath);
+            var resultLine = string.Format(_lang.FileExtractorNotificationResultFormat, success, failed);
+            var body = $"{folderName} ({rootFolderPath})\n{resultLine}";
+
+            var builder = new AppNotificationBuilder()
+                .AddText(_lang.FileExtractorNotificationTitle)
+                .AddText(body)
+                .AddArgument("action", "openFileExtractorFolder")
+                .AddArgument("folderPath", rootFolderPath)
+                .SetScenario(AppNotificationScenario.Urgent);
+
+            AppNotificationManager.Default.Show(builder.BuildNotification());
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Failed to send file extraction notification: {ex.Message}");
+        }
+    }
+
+    private static int LoadNotificationModeValue()
+    {
+        try
+        {
+            var settings = ApplicationData.Current.LocalSettings;
+            if (settings.Values.TryGetValue(NotificationModeSettingKey, out var v) && v is int i)
+                return i;
+        }
+        catch
+        {
+        }
+
+        return LoadNotificationModeFallback();
+    }
+
+    private static int LoadNotificationModeFallback()
+    {
+        try
+        {
+            if (File.Exists(NotificationModeFallbackPath))
+            {
+                var text = File.ReadAllText(NotificationModeFallbackPath).Trim();
+                if (int.TryParse(text, out var val))
+                    return val;
+            }
+        }
+        catch
+        {
+        }
+        return 1;
     }
 
     private static string GetUniqueFilePath(string folder, string fileName)

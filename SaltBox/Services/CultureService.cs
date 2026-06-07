@@ -110,8 +110,15 @@ public partial class CultureService : ObservableObject
             ["FileExtractorDescription"] = "Extract all files from subdirectories to the root folder. Folders are preserved.",
             ["FileExtractorEnable"] = "Enable File Extractor",
             ["FileExtractorEnableDescription"] = "Add a right-click menu on folders to extract files",
+            ["FileExtractorConfig"] = "Configuration",
             ["FileExtractorEnableOn"] = "On",
             ["FileExtractorEnableOff"] = "Off",
+            ["FileExtractorNotificationMode"] = "Notification",
+            ["FileExtractorNotificationNone"] = "No notification",
+            ["FileExtractorNotificationText"] = "Text",
+            ["FileExtractorNotificationTitle"] = "File Extraction",
+            ["FileExtractorNotificationResultFormat"] = "Success: {0}, Failed: {1}",
+            ["FileExtractorNotificationSystemHint"] = "If notifications do not appear, enable SaltBox notifications in System Settings → System → Notifications & actions.",
         },
         ["zh-CN"] = new()
         {
@@ -214,8 +221,15 @@ public partial class CultureService : ObservableObject
             ["FileExtractorDescription"] = "将子目录中的所有文件提取到根目录，保留原有文件夹。",
             ["FileExtractorEnable"] = "启用文件提取",
             ["FileExtractorEnableDescription"] = "在文件夹右键菜单中添加文件提取功能",
+            ["FileExtractorConfig"] = "配置",
             ["FileExtractorEnableOn"] = "开",
             ["FileExtractorEnableOff"] = "关",
+            ["FileExtractorNotificationMode"] = "通知方式",
+            ["FileExtractorNotificationNone"] = "无通知",
+            ["FileExtractorNotificationText"] = "文本通知",
+            ["FileExtractorNotificationTitle"] = "文件提取",
+            ["FileExtractorNotificationResultFormat"] = "提取成功 {0} 个，失败 {1} 个",
+            ["FileExtractorNotificationSystemHint"] = "若通知未显示，请在系统设置 → 系统 → 通知中为 SaltBox 开启通知权限。",
         }
     };
 
@@ -346,6 +360,13 @@ public partial class CultureService : ObservableObject
     public string FileExtractorEnableDescription => _strings.GetValueOrDefault(nameof(FileExtractorEnableDescription), "Add a right-click menu on folders to extract files");
     public string FileExtractorEnableOn => _strings.GetValueOrDefault(nameof(FileExtractorEnableOn), "On");
     public string FileExtractorEnableOff => _strings.GetValueOrDefault(nameof(FileExtractorEnableOff), "Off");
+    public string FileExtractorConfig => _strings.GetValueOrDefault(nameof(FileExtractorConfig), "Configuration");
+    public string FileExtractorNotificationMode => _strings.GetValueOrDefault(nameof(FileExtractorNotificationMode), "Notification");
+    public string FileExtractorNotificationNone => _strings.GetValueOrDefault(nameof(FileExtractorNotificationNone), "No notification");
+    public string FileExtractorNotificationText => _strings.GetValueOrDefault(nameof(FileExtractorNotificationText), "Text");
+    public string FileExtractorNotificationTitle => _strings.GetValueOrDefault(nameof(FileExtractorNotificationTitle), "File Extraction");
+    public string FileExtractorNotificationResultFormat => _strings.GetValueOrDefault(nameof(FileExtractorNotificationResultFormat), "Success: {0}, Failed: {1}");
+    public string FileExtractorNotificationSystemHint => _strings.GetValueOrDefault(nameof(FileExtractorNotificationSystemHint), "If notifications do not appear, enable SaltBox notifications in System Settings.");
 
     public void SetCulture(string code)
     {
