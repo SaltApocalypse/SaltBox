@@ -3,9 +3,9 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:keycap="using:SaltBox.Controls"
-    Title="{x:Bind TitleText, Mode=OneWay}"
-    PrimaryButtonText="{x:Bind SaveText, Mode=OneWay}"
-    SecondaryButtonText="{x:Bind CancelText, Mode=OneWay}"
+    Title="{x:Bind TitleText, Mode=OneTime}"
+    PrimaryButtonText="{x:Bind SaveText, Mode=OneTime}"
+    SecondaryButtonText="{x:Bind CancelText, Mode=OneTime}"
     IsPrimaryButtonEnabled="False"
     PrimaryButtonStyle="{StaticResource AccentButtonStyle}"
     PrimaryButtonClick="OnPrimaryButtonClick"
@@ -46,8 +46,8 @@
             Severity="Warning"
             IsOpen="False"
             IsClosable="False"
-            Title="{x:Bind WarningTitle, Mode=OneWay}"
-            Message="{x:Bind WarningMessage, Mode=OneWay}" />
+            Title="{x:Bind WarningTitle, Mode=OneTime}"
+            Message="{x:Bind WarningMessage, Mode=OneTime}" />
 
         <InfoBar
             x:Name="ConflictBar"
@@ -57,7 +57,7 @@
 
         <Button
             x:Name="ResetButton"
-            Content="{x:Bind ResetText, Mode=OneWay}"
+            Content="{x:Bind ResetText, Mode=OneTime}"
             IsEnabled="False"
             HorizontalAlignment="Center"
             Click="OnResetClick" />
