@@ -165,6 +165,13 @@ public sealed partial class HomePage : Page
 <TextBlock Text="{x:Bind ViewModel.Lang.HomeTitle, Mode=OneWay}" />
 ```
 
+## i18n Key Naming Convention
+
+- **Feature-specific keys**: prefix with feature name — `ScreenshotXXX`, `FileExtractorXXX`, `SettingsXXX`, `DevXXX`, `HomeXXX`, `NavXXX`.
+- **Reusable generic keys**: prefix with `Common` — `CommonOn`, `CommonOff`, `CommonConfig`, `CommonCopy`, `CommonSave`, `CommonBrowse`, `CommonNotificationSystemHint`.
+- Do NOT create `Common` keys for strings that carry feature-specific semantics or may diverge in translation.
+- Do NOT use meaningless names like `Label1`, `Button1`, `Text1`.
+
 # Notification Rules
 
 - Use `Microsoft.Windows.AppNotifications.AppNotificationManager` + `AppNotificationBuilder`.

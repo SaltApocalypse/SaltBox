@@ -26,8 +26,8 @@
                 Description="{x:Bind ViewModel.Lang.ScreenshotEnableDescription, Mode=OneWay}">
                     <ToggleSwitch
                     IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
-                    OnContent="{x:Bind ViewModel.Lang.ScreenshotEnableOn, Mode=OneWay}"
-                    OffContent="{x:Bind ViewModel.Lang.ScreenshotEnableOff, Mode=OneWay}"
+                    OnContent="{x:Bind ViewModel.Lang.CommonOn, Mode=OneWay}"
+                    OffContent="{x:Bind ViewModel.Lang.CommonOff, Mode=OneWay}"
                     HorizontalAlignment="Right" />
                 </controls:SettingsCard>
 
@@ -54,7 +54,7 @@
 
             <StackPanel Spacing="12">
                 <TextBlock
-                    Text="{x:Bind ViewModel.Lang.ScreenshotConfig, Mode=OneWay}"
+                    Text="{x:Bind ViewModel.Lang.CommonConfig, Mode=OneWay}"
                     Style="{StaticResource BodyStrongTextBlockStyle}" />
  
                 <controls:SettingsCard
@@ -87,7 +87,7 @@
                         <Button
                             Grid.Column="1"
                             Command="{x:Bind ViewModel.PickFolderCommand}"
-                            Content="{x:Bind ViewModel.Lang.Browse, Mode=OneWay}" />
+                            Content="{x:Bind ViewModel.Lang.CommonBrowse, Mode=OneWay}" />
                     </Grid>
 
                     <controls:SettingsExpander.Items>
@@ -178,7 +178,7 @@
                         Severity="Informational"
                         IsClosable="False"
                         IsOpen="{x:Bind ViewModel.HasNotificationHint, Mode=OneWay}"
-                        Message="{x:Bind ViewModel.Lang.ScreenshotNotificationSystemHint, Mode=OneWay}" />
+                        Message="{x:Bind ViewModel.Lang.CommonNotificationSystemHint, Mode=OneWay}" />
                 </StackPanel>
             </StackPanel>
 

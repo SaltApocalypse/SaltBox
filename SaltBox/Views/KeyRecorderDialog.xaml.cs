@@ -44,8 +44,8 @@ public sealed partial class KeyRecorderDialog : ContentDialog
     public void SetLanguage(CultureService lang)
     {
         TitleText = lang.KeyRecorderTitle;
-        SaveText = lang.Save;
-        CancelText = lang.Cancel;
+        SaveText = lang.CommonSave;
+        CancelText = lang.CommonCancel;
         WarningTitle = lang.ShortcutWarningTitle;
         WarningMessage = lang.ShortcutWarningMessage;
         _conflictTitle = lang.ShortcutConflictTitle;

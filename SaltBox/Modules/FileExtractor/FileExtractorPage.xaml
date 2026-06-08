@@ -18,14 +18,14 @@
                 Description="{x:Bind ViewModel.Lang.FileExtractorEnableDescription, Mode=OneWay}">
                 <ToggleSwitch
                     IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
-                    OnContent="{x:Bind ViewModel.Lang.FileExtractorEnableOn, Mode=OneWay}"
-                    OffContent="{x:Bind ViewModel.Lang.FileExtractorEnableOff, Mode=OneWay}"
+                    OnContent="{x:Bind ViewModel.Lang.CommonOn, Mode=OneWay}"
+                    OffContent="{x:Bind ViewModel.Lang.CommonOff, Mode=OneWay}"
                     HorizontalAlignment="Right" />
             </controls:SettingsCard>
 
             <StackPanel Spacing="12">
                 <TextBlock
-                    Text="{x:Bind ViewModel.Lang.FileExtractorConfig, Mode=OneWay}"
+                    Text="{x:Bind ViewModel.Lang.CommonConfig, Mode=OneWay}"
                     Style="{StaticResource BodyStrongTextBlockStyle}" />
 
                 <StackPanel Spacing="0">
@@ -44,7 +44,7 @@
                     Severity="Informational"
                     IsClosable="False"
                     IsOpen="{x:Bind ViewModel.HasNotificationHint, Mode=OneWay}"
-                    Message="{x:Bind ViewModel.Lang.FileExtractorNotificationSystemHint, Mode=OneWay}" />
+                    Message="{x:Bind ViewModel.Lang.CommonNotificationSystemHint, Mode=OneWay}" />
                 </StackPanel>
             </StackPanel>
 

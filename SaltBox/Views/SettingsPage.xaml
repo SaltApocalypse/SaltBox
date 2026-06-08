@@ -88,8 +88,8 @@
                     Description="{x:Bind ViewModel.Lang.SettingsDevModeDescription, Mode=OneWay}">
                     <ToggleSwitch
                         IsOn="{x:Bind ViewModel.IsDeveloperModeEnabled, Mode=TwoWay}"
-                        OnContent="{x:Bind ViewModel.Lang.SettingsDevModeOn, Mode=OneWay}"
-                        OffContent="{x:Bind ViewModel.Lang.SettingsDevModeOff, Mode=OneWay}" />
+                        OnContent="{x:Bind ViewModel.Lang.CommonOn, Mode=OneWay}"
+                        OffContent="{x:Bind ViewModel.Lang.CommonOff, Mode=OneWay}" />
                 </controls:SettingsCard>
             </StackPanel>
 
