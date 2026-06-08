@@ -46,9 +46,26 @@ public sealed partial class MainWindow : Window
         }
 
         Title = "SaltBox";
+        SetWindowIcon();
 
         _theme.ThemeChanged += OnThemeChanged;
         _theme.ApplyTheme(RootGrid);
+    }
+
+    private void SetWindowIcon()
+    {
+        try
+        {
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon256x256.ico");
+            var iconHandle = LoadImage(IntPtr.Zero, iconPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+            if (iconHandle != IntPtr.Zero)
+            {
+                SendMessage(hwnd, WM_SETICON, ICON_BIG, iconHandle);
+                SendMessage(hwnd, WM_SETICON, ICON_SMALL, iconHandle);
+            }
+        }
+        catch { }
     }
 
     private void OnThemeChanged(ElementTheme theme)
@@ -245,6 +262,19 @@ public sealed partial class MainWindow : Window
 
 
     }
+
+    private const uint WM_SETICON = 0x0080;
+    private const int ICON_SMALL = 0;
+    private const int ICON_BIG = 1;
+    private const uint IMAGE_ICON = 1;
+    private const uint LR_LOADFROMFILE = 0x00000010;
+    private const uint LR_DEFAULTSIZE = 0x00000040;
+
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern IntPtr LoadImage(IntPtr hInst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(nint hWnd, uint Msg, nint wParam, nint lParam);
 
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(nint hWnd, int nCmdShow);

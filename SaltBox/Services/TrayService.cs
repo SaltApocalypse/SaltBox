@@ -227,6 +227,18 @@ public class TrayService
     {
         try
         {
+            var icoPath = FindIcoPath();
+            if (icoPath != null && File.Exists(icoPath))
+            {
+                var icon = LoadImage(IntPtr.Zero, icoPath, IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
+                if (icon != IntPtr.Zero)
+                    return icon;
+            }
+        }
+        catch { }
+
+        try
+        {
             var icoName = "SaltBoxTray.ico";
             var icoPath = Path.Combine(ApplicationData.Current.TemporaryFolder.Path, icoName);
 
@@ -259,20 +271,40 @@ public class TrayService
         return IntPtr.Zero;
     }
 
+    private static string? FindIcoPath()
+    {
+        var candidates = new[]
+        {
+            TryGetPkgIcoPath(),
+            Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon32x32.ico"),
+        };
+        return candidates.FirstOrDefault(File.Exists);
+    }
+
+    private static string? TryGetPkgIcoPath()
+    {
+        try
+        {
+            return Path.Combine(Package.Current.InstalledLocation.Path, "Assets", "AppIcon32x32.ico");
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private static string? FindPngPath()
     {
         var candidates = new[]
         {
-            // With package identity: Package.Current.InstalledLocation points to app dir
-            TryGetPkgPath(),
-            // Without package identity: use AppContext.BaseDirectory
+            TryGetPkgPngPath(),
             Path.Combine(AppContext.BaseDirectory, "Assets", "StoreLogo.png"),
         };
 
         return candidates.FirstOrDefault(File.Exists);
     }
 
-    private static string? TryGetPkgPath()
+    private static string? TryGetPkgPngPath()
     {
         try
         {
@@ -280,7 +312,7 @@ public class TrayService
         }
         catch (Exception ex)
         {
-            Log.Warning("TryGetPkgPath failed: {Message}", ex.Message);
+            Log.Warning("TryGetPkgPngPath failed: {Message}", ex.Message);
             return null;
         }
     }

@@ -58,13 +58,13 @@ public partial class UpdateService : ObservableObject
         try
         {
             var v = Assembly.GetEntryAssembly()?.GetName()?.Version;
-            CurrentVersion = v is not null ? $"{v.Major}.{v.Minor}.{v.Build}" : "0.3.0";
+            CurrentVersion = v is not null ? $"{v.Major}.{v.Minor}.{v.Build}" : "0.3.1";
             _log.Debug($"InitVersion: assembly version = {v?.ToString() ?? "null"}, CurrentVersion set to {CurrentVersion}");
         }
         catch (Exception ex)
         {
-            CurrentVersion = "0.3.0";
-            _log.Debug($"InitVersion: fallback to 0.3.0 due to {ex.Message}");
+            CurrentVersion = "0.3.1";
+            _log.Debug($"InitVersion: fallback to 0.3.1 due to {ex.Message}");
         }
     }
 
