@@ -1,8 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using SaltBox.Models;
+using SaltBox.Services;
 using Serilog.Events;
 
-namespace SaltBox.Services;
+namespace SaltBox.Modules.DeveloperMode;
 
 public enum LogLevelFilter
 {

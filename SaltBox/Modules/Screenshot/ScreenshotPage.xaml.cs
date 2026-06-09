@@ -2,10 +2,9 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using SaltBox.Services;
-using SaltBox.ViewModels;
 using Windows.System;
 
-namespace SaltBox.Views;
+namespace SaltBox.Modules.Screenshot;
 
 public sealed partial class ScreenshotPage : Page
 {

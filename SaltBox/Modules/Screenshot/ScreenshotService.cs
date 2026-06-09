@@ -19,9 +19,9 @@ using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 using SaltBox.Helpers;
-using SaltBox.ViewModels;
+using SaltBox.Services;
 
-namespace SaltBox.Services;
+namespace SaltBox.Modules.Screenshot;
 
 public class DisplayInfo
 {

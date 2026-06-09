@@ -44,32 +44,42 @@ Current project layout:
 ```
 SaltBox/
 ├── SaltBox.slnx
-├── Agent.md
+├── AGENTS.md
+├── Dev.md
+├── README.md
 ├── IdentityPackage/                 # Sparse package for package identity
 │   ├── AppxManifest.xml
 │   └── BuildIdentityPackage.cmd
+├── publish/                         # Published output (after dotnet publish)
+├── Releases/                        # Velopack release artifacts
 ├── SaltBox/                         # Main WinUI 3 project (unpackaged)
 │   ├── SaltBox.csproj
 │   ├── App.xaml / .cs               # DI host + Serilog + Velopack setup
 │   ├── MainWindow.xaml / .cs        # NavigationView shell
 │   ├── app.manifest                 # Contains msix element for identity binding
-│   ├── Views/                       # Pages (HomePage, SettingsPage, ScreenshotPage, ...)
-│   ├── ViewModels/                  # MVVM ViewModels
-│   ├── Services/                    # Application services
+│   ├── Views/                       # App-level pages (HomePage, SettingsPage, ...)
+│   ├── ViewModels/                  # App-level ViewModels (Home, Settings, Main)
+│   ├── Services/                    # Shared application services
 │   │   ├── LogService.cs
 │   │   ├── ToolRegistry.cs
 │   │   ├── ThemeService.cs
 │   │   ├── CultureService.cs
 │   │   ├── TrayService.cs
 │   │   ├── UpdateService.cs
-│   │   ├── ScreenshotService.cs
-│   │   └── ...
+│   │   ├── ShortcutRegistry.cs
+│   │   ├── ContextMenuManager.cs
+│   │   └── InMemoryLogSink.cs
 │   ├── Contracts/
 │   │   └── IToolModule.cs
 │   ├── Models/
 │   ├── Helpers/
-│   ├── Extensions/
+│   ├── Extensions/                  # Available for future use
+│   ├── Controls/                    # Custom controls (e.g. KeyCap)
+│   ├── Converters/                  # Value converters
 │   ├── Modules/                     # Tool modules (one folder per tool)
+│   │   ├── FileExtractor/
+│   │   ├── Screenshot/
+│   │   └── DeveloperMode/
 │   ├── Config/
 │   │   └── appsettings.json
 │   ├── Assets/

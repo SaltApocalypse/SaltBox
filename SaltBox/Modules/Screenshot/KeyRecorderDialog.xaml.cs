@@ -9,7 +9,7 @@ using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using Windows.System;
 
-namespace SaltBox.Views;
+namespace SaltBox.Modules.Screenshot;
 
 public sealed partial class KeyRecorderDialog : ContentDialog
 {

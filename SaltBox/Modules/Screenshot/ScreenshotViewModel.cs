@@ -10,7 +10,7 @@ using Serilog;
 using Windows.Storage;
 using Windows.System;
 
-namespace SaltBox.ViewModels;
+namespace SaltBox.Modules.Screenshot;
 
 public enum NotificationMode
 {

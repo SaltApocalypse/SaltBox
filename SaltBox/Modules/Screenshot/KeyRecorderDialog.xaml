@@ -1,5 +1,5 @@
 <ContentDialog
-    x:Class="SaltBox.Views.KeyRecorderDialog"
+    x:Class="SaltBox.Modules.Screenshot.KeyRecorderDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:keycap="using:SaltBox.Controls"

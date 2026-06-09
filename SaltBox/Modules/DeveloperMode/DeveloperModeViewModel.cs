@@ -6,7 +6,7 @@ using System.Diagnostics;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 
-namespace SaltBox.ViewModels;
+namespace SaltBox.Modules.DeveloperMode;
 
 public partial class DeveloperModeViewModel : ObservableObject
 {
