@@ -1,12 +1,15 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using SaltBox.Config;
+using SaltBox.Contracts;
 using Serilog;
 using Windows.Globalization;
-using Windows.Storage;
 
 namespace SaltBox.Services;
 
 public partial class CultureService : ObservableObject
 {
+    private readonly IConfigService _config;
+
     private static readonly Dictionary<string, Dictionary<string, string>> _resources = new()
     {
         ["en-US"] = new()
@@ -92,6 +95,8 @@ public partial class CultureService : ObservableObject
             ["DevCopyLogsDesc"] = "Copy logs to clipboard or export to file",
             ["DevExportSuccess"] = "Exported successfully",
             ["DevExportFailed"] = "Export failed",
+            ["DevOpenLogDir"] = "Open log directory",
+            ["DevOpenLogDirDesc"] = "Open the logs folder in File Explorer",
             ["HomeUpdateBanner"] = "New version v{0} -> v{1} available",
             ["NavFileManagement"] = "File Management",
             ["NavFileExtractor"] = "File Extractor",
@@ -113,6 +118,17 @@ public partial class CultureService : ObservableObject
             ["CommonCancel"] = "Cancel",
             ["CommonBrowse"] = "Browse\u2026",
             ["CommonNotificationSystemHint"] = "If notifications do not appear, enable SaltBox notifications in System Settings → System → Notifications & actions.",
+            ["ScreenshotExperimental"] = "Experimental features",
+            ["ScreenshotHdrMode"] = "HDR compatibility mode",
+            ["ScreenshotHdrModeAuto"] = "Auto (Recommended)",
+            ["ScreenshotHdrForceHdr"] = "Force HDR processing",
+            ["ScreenshotHdrForceSdr"] = "Force SDR processing",
+            ["ScreenshotHdrDiagnostics"] = "Copy HDR diagnostic info",
+            ["ScreenshotHdrDiagnosticsDesc"] = "Automatic selection mode or forced setting",
+            ["ScreenshotHdrModeHint"] = "If display screenshots appear abnormal, washed out, or have incorrect colors in HDR mode, try enabling \"Force HDR processing\".",
+            ["ScreenshotHdrExport"] = "Export to file",
+            ["ScreenshotHdrExportSuccess"] = "HDR diagnostic info exported",
+            ["ScreenshotHdrExportFailed"] = "HDR diagnostic info export failed",
         },
         ["zh-CN"] = new()
         {
@@ -197,6 +213,8 @@ public partial class CultureService : ObservableObject
             ["DevCopyLogsDesc"] = "复制日志到剪贴板或导出到文件",
             ["DevExportSuccess"] = "导出成功",
             ["DevExportFailed"] = "导出失败",
+            ["DevOpenLogDir"] = "打开日志目录",
+            ["DevOpenLogDirDesc"] = "在文件资源管理器中打开日志文件夹",
             ["HomeUpdateBanner"] = "发现新版本 v{0} -> v{1}",
             ["NavFileManagement"] = "文件管理",
             ["NavFileExtractor"] = "文件提取",
@@ -218,6 +236,17 @@ public partial class CultureService : ObservableObject
             ["CommonCancel"] = "取消",
             ["CommonBrowse"] = "浏览\u2026",
             ["CommonNotificationSystemHint"] = "若通知未显示，请在系统设置 → 系统 → 通知中为 SaltBox 开启通知权限。",
+            ["ScreenshotExperimental"] = "实验性功能",
+            ["ScreenshotHdrMode"] = "HDR兼容模式",
+            ["ScreenshotHdrModeAuto"] = "自动（推荐）",
+            ["ScreenshotHdrForceHdr"] = "强制HDR处理",
+            ["ScreenshotHdrForceSdr"] = "强制SDR处理",
+            ["ScreenshotHdrDiagnostics"] = "复制HDR诊断信息",
+            ["ScreenshotHdrDiagnosticsDesc"] = "自动选择模式或强制设定",
+            ["ScreenshotHdrModeHint"] = "在HDR模式下如出现显示器截图异常、发白或颜色不正确的问题，请尝试\"强制HDR处理\"模式。",
+            ["ScreenshotHdrExport"] = "导出到文件",
+            ["ScreenshotHdrExportSuccess"] = "HDR诊断信息已导出",
+            ["ScreenshotHdrExportFailed"] = "HDR诊断信息导出失败",
         }
     };
 
@@ -225,8 +254,9 @@ public partial class CultureService : ObservableObject
 
     public string CurrentCulture { get; private set; }
 
-    public CultureService()
+    public CultureService(IConfigService config)
     {
+        _config = config;
         var saved = LoadSavedCulture();
         CurrentCulture = string.IsNullOrEmpty(saved) ? DetectSystemCulture() : saved;
         _strings = _resources.GetValueOrDefault(CurrentCulture, _resources["en-US"]);
@@ -328,6 +358,8 @@ public partial class CultureService : ObservableObject
     public string DevCopyLogsDesc => _strings.GetValueOrDefault(nameof(DevCopyLogsDesc), "Copy logs to clipboard or export to file");
     public string DevExportSuccess => _strings.GetValueOrDefault(nameof(DevExportSuccess), "Exported successfully");
     public string DevExportFailed => _strings.GetValueOrDefault(nameof(DevExportFailed), "Export failed");
+    public string DevOpenLogDir => _strings.GetValueOrDefault(nameof(DevOpenLogDir), "Open log directory");
+    public string DevOpenLogDirDesc => _strings.GetValueOrDefault(nameof(DevOpenLogDirDesc), "Open the logs folder in File Explorer");
     public string HomeUpdateBanner => _strings.GetValueOrDefault(nameof(HomeUpdateBanner), "New version v{0} -> v{1} available");
     public string NavFileManagement => _strings.GetValueOrDefault(nameof(NavFileManagement), "File Management");
     public string NavFileExtractor => _strings.GetValueOrDefault(nameof(NavFileExtractor), "File Extractor");
@@ -349,6 +381,17 @@ public partial class CultureService : ObservableObject
     public string FileExtractorNotificationText => _strings.GetValueOrDefault(nameof(FileExtractorNotificationText), "Text");
     public string FileExtractorNotificationTitle => _strings.GetValueOrDefault(nameof(FileExtractorNotificationTitle), "File Extraction");
     public string FileExtractorNotificationResultFormat => _strings.GetValueOrDefault(nameof(FileExtractorNotificationResultFormat), "Success: {0}, Failed: {1}");
+    public string ScreenshotExperimental => _strings.GetValueOrDefault(nameof(ScreenshotExperimental), "Experimental features");
+    public string ScreenshotHdrMode => _strings.GetValueOrDefault(nameof(ScreenshotHdrMode), "HDR compatibility mode");
+    public string ScreenshotHdrModeAuto => _strings.GetValueOrDefault(nameof(ScreenshotHdrModeAuto), "Auto (Recommended)");
+    public string ScreenshotHdrForceHdr => _strings.GetValueOrDefault(nameof(ScreenshotHdrForceHdr), "Force HDR processing");
+    public string ScreenshotHdrForceSdr => _strings.GetValueOrDefault(nameof(ScreenshotHdrForceSdr), "Force SDR processing");
+    public string ScreenshotHdrDiagnostics => _strings.GetValueOrDefault(nameof(ScreenshotHdrDiagnostics), "Copy HDR diagnostic info");
+    public string ScreenshotHdrDiagnosticsDesc => _strings.GetValueOrDefault(nameof(ScreenshotHdrDiagnosticsDesc), "Get HDR-related diagnostic information for troubleshooting");
+    public string ScreenshotHdrModeHint => _strings.GetValueOrDefault(nameof(ScreenshotHdrModeHint), "If display screenshots appear abnormal, washed out, or have incorrect colors in HDR mode, try enabling \"Force HDR processing\".");
+    public string ScreenshotHdrExport => _strings.GetValueOrDefault(nameof(ScreenshotHdrExport), "Export to file");
+    public string ScreenshotHdrExportSuccess => _strings.GetValueOrDefault(nameof(ScreenshotHdrExportSuccess), "HDR diagnostic info exported");
+    public string ScreenshotHdrExportFailed => _strings.GetValueOrDefault(nameof(ScreenshotHdrExportFailed), "HDR diagnostic info export failed");
 
     public void SetCulture(string code)
     {
@@ -364,13 +407,11 @@ public partial class CultureService : ObservableObject
         OnPropertyChanged((string?)null);
     }
 
-    private static string? LoadSavedCulture()
+    private string? LoadSavedCulture()
     {
         try
         {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue("AppLanguage", out var val) && val is string s)
-                return s;
+            return _config.Load<AppConfig>().Language;
         }
         catch (Exception ex)
         {
@@ -379,11 +420,13 @@ public partial class CultureService : ObservableObject
         return null;
     }
 
-    private static void SaveCulture(string code)
+    private void SaveCulture(string code)
     {
         try
         {
-            ApplicationData.Current.LocalSettings.Values["AppLanguage"] = code;
+            var appConfig = _config.Load<AppConfig>();
+            appConfig.Language = code;
+            _config.Save(appConfig);
         }
         catch (Exception ex)
         {

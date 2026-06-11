@@ -1,7 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using SaltBox.Contracts;
 using SaltBox.Services;
-using Serilog;
-using Windows.Storage;
 
 namespace SaltBox.Modules.FileExtractor;
 
@@ -13,11 +12,9 @@ public enum FileExtractorNotificationMode
 
 public partial class FileExtractorViewModel : ObservableObject
 {
-    private const string NotificationModeKey = "FileExtractorNotificationMode";
-    private static readonly string NotificationModeFallbackPath =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SaltBox", "Settings", "FileExtractorNotificationMode.txt");
-
     private readonly FileExtractorService _fileExtractorService;
+    private readonly IConfigService _configService;
+    private FileExtractorConfig _config;
 
     public CultureService Lang { get; }
 
@@ -39,18 +36,21 @@ public partial class FileExtractorViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(NotificationModeIndex));
         OnPropertyChanged(nameof(HasNotificationHint));
-        SaveNotificationMode(value);
+        _config.NotificationMode = (int)value;
+        SaveConfig();
     }
 
-    public FileExtractorViewModel(CultureService lang, FileExtractorService fileExtractorService)
+    public FileExtractorViewModel(CultureService lang, FileExtractorService fileExtractorService, IConfigService configService)
     {
         Lang = lang;
         _fileExtractorService = fileExtractorService;
+        _configService = configService;
+        _config = configService.Load<FileExtractorConfig>();
 
         _isEnabled = _fileExtractorService.IsEnabled;
         OnPropertyChanged(nameof(IsEnabled));
 
-        _notificationMode = LoadNotificationMode();
+        _notificationMode = (FileExtractorNotificationMode)_config.NotificationMode;
         OnPropertyChanged(nameof(NotificationModeIndex));
     }
 
@@ -59,63 +59,15 @@ public partial class FileExtractorViewModel : ObservableObject
         _fileExtractorService.IsEnabled = value;
     }
 
-    private static FileExtractorNotificationMode LoadNotificationMode()
+    private void SaveConfig()
     {
         try
         {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue(NotificationModeKey, out var v) && v is int i)
-                return (FileExtractorNotificationMode)i;
-        }
-        catch
-        {
-        }
-
-        return LoadNotificationModeFallback();
-    }
-
-    private static FileExtractorNotificationMode LoadNotificationModeFallback()
-    {
-        try
-        {
-            if (File.Exists(NotificationModeFallbackPath))
-            {
-                var text = File.ReadAllText(NotificationModeFallbackPath).Trim();
-                if (int.TryParse(text, out var val))
-                    return (FileExtractorNotificationMode)val;
-            }
+            _configService.Save(_config);
         }
         catch (Exception ex)
         {
-            Log.Warning("Failed to load notification mode from fallback: {Message}", ex.Message);
-        }
-        return FileExtractorNotificationMode.Text;
-    }
-
-    private static void SaveNotificationMode(FileExtractorNotificationMode mode)
-    {
-        try
-        {
-            ApplicationData.Current.LocalSettings.Values[NotificationModeKey] = (int)mode;
-        }
-        catch
-        {
-        }
-
-        SaveNotificationModeFallback(mode);
-    }
-
-    private static void SaveNotificationModeFallback(FileExtractorNotificationMode mode)
-    {
-        try
-        {
-            var dir = Path.GetDirectoryName(NotificationModeFallbackPath);
-            if (dir != null) Directory.CreateDirectory(dir);
-            File.WriteAllText(NotificationModeFallbackPath, ((int)mode).ToString());
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("Failed to save notification mode to fallback: {Message}", ex.Message);
+            Serilog.Log.Warning("Failed to save FileExtractor config: {Message}", ex.Message);
         }
     }
 }

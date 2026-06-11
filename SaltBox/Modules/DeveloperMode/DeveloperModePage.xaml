@@ -8,44 +8,51 @@
             <TextBlock Text="{x:Bind ViewModel.Lang.DevLogsTitle, Mode=OneWay}"
                        Style="{StaticResource TitleTextBlockStyle}" />
 
-            <controls:SettingsExpander Header="{x:Bind ViewModel.Lang.DevLogLevel, Mode=OneWay}"
-                                       IsExpanded="False">
+            <StackPanel Spacing="0">
+                <controls:SettingsExpander Header="{x:Bind ViewModel.Lang.DevLogLevel, Mode=OneWay}"
+                                           IsExpanded="False">
 
-                <ComboBox ItemsSource="{x:Bind ViewModel.LogLevels, Mode=OneWay}"
-                          SelectedItem="{x:Bind ViewModel.SelectedMinLevel, Mode=TwoWay}"
-                          MinWidth="120" />
+                    <ComboBox ItemsSource="{x:Bind ViewModel.LogLevels, Mode=OneWay}"
+                              SelectedItem="{x:Bind ViewModel.SelectedMinLevel, Mode=TwoWay}"
+                              MinWidth="120" />
 
-                <controls:SettingsExpander.Items>
-                    <controls:SettingsCard Header="{x:Bind ViewModel.Lang.DevCopyLogs, Mode=OneWay}"
-                                           Description="{x:Bind ViewModel.Lang.DevCopyLogsDesc, Mode=OneWay}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Command="{x:Bind ViewModel.CopyLogsCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <FontIcon Glyph="&#xE8C8;" FontSize="12" />
-                                    <TextBlock Text="{x:Bind ViewModel.Lang.CommonCopy, Mode=OneWay}" />
-                                </StackPanel>
-                            </Button>
-                            <Button Command="{x:Bind ViewModel.ExportLogsCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <FontIcon Glyph="&#xE74E;" FontSize="12" />
-                                    <TextBlock Text="{x:Bind ViewModel.Lang.CommonExport, Mode=OneWay}" />
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
-                    </controls:SettingsCard>
-
-                    <controls:SettingsCard Header="{x:Bind ViewModel.ExportStatusText, Mode=OneWay}"
-                                           Visibility="{x:Bind ViewModel.ShowExportResult, Mode=OneWay}">
-                        <Button Command="{x:Bind ViewModel.OpenLogFolderCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <FontIcon Glyph="&#xED25;" FontSize="12" />
-                                <TextBlock Text="{x:Bind ViewModel.Lang.CommonOpenFolder, Mode=OneWay}" />
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Header="{x:Bind ViewModel.Lang.DevCopyLogs, Mode=OneWay}"
+                                               Description="{x:Bind ViewModel.Lang.DevCopyLogsDesc, Mode=OneWay}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Command="{x:Bind ViewModel.CopyLogsCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <FontIcon Glyph="&#xE8C8;" FontSize="12" />
+                                        <TextBlock Text="{x:Bind ViewModel.Lang.CommonCopy, Mode=OneWay}" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{x:Bind ViewModel.ExportLogsCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <FontIcon Glyph="&#xE74E;" FontSize="12" />
+                                        <TextBlock Text="{x:Bind ViewModel.Lang.CommonExport, Mode=OneWay}" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
-                        </Button>
-                    </controls:SettingsCard>
-                </controls:SettingsExpander.Items>
-            </controls:SettingsExpander>
+                        </controls:SettingsCard>
 
+                        <controls:SettingsCard Header="{x:Bind ViewModel.Lang.DevOpenLogDir, Mode=OneWay}"
+                                               Description="{x:Bind ViewModel.Lang.DevOpenLogDirDesc, Mode=OneWay}">
+                            <Button Command="{x:Bind ViewModel.OpenLogFolderCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <FontIcon Glyph="&#xED25;" FontSize="12" />
+                                    <TextBlock Text="{x:Bind ViewModel.Lang.CommonOpenFolder, Mode=OneWay}" />
+                                </StackPanel>
+                            </Button>
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+
+                <InfoBar Severity="{x:Bind ViewModel.ExportResultSeverity, Mode=OneWay}"
+                         Title="{x:Bind ViewModel.ExportStatusText, Mode=OneWay}"
+                         IsOpen="{x:Bind ViewModel.IsExportResultVisible, Mode=TwoWay}"
+                         IsClosable="True" />
+            </StackPanel>
+            
             <Border Background="{ThemeResource CardBackgroundFillColorDefault}"
                     CornerRadius="8">
                 <Grid>

@@ -4,10 +4,10 @@ using Microsoft.UI.Xaml.Controls;
 using System.Diagnostics;
 using Microsoft.Windows.AppNotifications;
 using Microsoft.Windows.AppNotifications.Builder;
+using SaltBox.Contracts;
 using SaltBox.Helpers;
 using SaltBox.Services;
 using Serilog;
-using Windows.Storage;
 using Windows.System;
 
 namespace SaltBox.Modules.Screenshot;
@@ -24,11 +24,29 @@ public partial class ScreenshotViewModel : ObservableObject
     private readonly ScreenshotService _screenshotService;
     private readonly ShortcutRegistry _shortcutRegistry;
     private readonly LogService _log;
+    private readonly IConfigService _configService;
+    private ScreenshotConfig _config = new();
     public CultureService Lang { get; }
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(CaptureCommand))]
     private bool _isEnabled;
+
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set
+        {
+            if (_isEnabled == value)
+                return;
+            _isEnabled = value;
+            OnPropertyChanged();
+            _config.IsEnabled = value;
+            Save();
+            _screenshotService.IsEnabled = value;
+            if (!value)
+                StatusMessage = "";
+            CaptureCommand.NotifyCanExecuteChanged();
+        }
+    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CaptureCommand))]
@@ -49,8 +67,27 @@ public partial class ScreenshotViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(NotificationModeIndex));
         OnPropertyChanged(nameof(HasNotificationHint));
-        SaveNotificationMode(value);
+        _config.NotificationMode = (int)value;
+        Save();
         _screenshotService.NotificationMode = value;
+    }
+
+    [ObservableProperty]
+    private HdrMode _hdrMode;
+
+    public int HdrModeIndex
+    {
+        get => (int)HdrMode;
+        set => HdrMode = (HdrMode)value;
+    }
+
+    partial void OnHdrModeChanged(HdrMode value)
+    {
+        OnPropertyChanged(nameof(HdrModeIndex));
+        _config.HdrMode = (int)value;
+        Save();
+        _screenshotService.HdrModeOverride = value;
+        _log.Info($"HDR mode changed to {value}");
     }
 
     [ObservableProperty]
@@ -115,35 +152,39 @@ public partial class ScreenshotViewModel : ObservableObject
     public List<string> ShortcutKeyNames => ModifierHelper.GetKeyNames(_shortcutModifier, _shortcutKey);
     public string ShortcutDisplayText => string.Join(" ", ShortcutKeyNames);
 
-    public ScreenshotViewModel(CultureService lang, ScreenshotService screenshotService, ShortcutRegistry shortcutRegistry, LogService log)
+    public ScreenshotViewModel(CultureService lang, ScreenshotService screenshotService, ShortcutRegistry shortcutRegistry, LogService log, IConfigService configService)
     {
         Lang = lang;
         _screenshotService = screenshotService;
         _shortcutRegistry = shortcutRegistry;
         _log = log;
+        _configService = configService;
+        _config = configService.Load<ScreenshotConfig>();
 
-        IsEnabled = LoadIsEnabled();
-        _screenshotService.IsEnabled = IsEnabled;
+        IsEnabled = _config.IsEnabled;
+        _screenshotService.IsEnabled = _config.IsEnabled;
 
-        var savedMode = LoadNotificationMode();
-        _notificationMode = savedMode;
-        _screenshotService.NotificationMode = savedMode;
+        _notificationMode = (NotificationMode)_config.NotificationMode;
+        _screenshotService.NotificationMode = _notificationMode;
         OnPropertyChanged(nameof(NotificationModeIndex));
+
+        _hdrMode = (HdrMode)_config.HdrMode;
+        _screenshotService.HdrModeOverride = _hdrMode;
+        OnPropertyChanged(nameof(HdrModeIndex));
 
         var displays = _screenshotService.GetDisplays();
         Displays = displays;
 
-        var savedDisplay = LoadSelectedDisplay();
-        SelectedDisplay = displays.FirstOrDefault(d => d.DeviceName == savedDisplay)
+        SelectedDisplay = displays.FirstOrDefault(d => d.DeviceName == _config.SelectedDisplay)
                        ?? displays.FirstOrDefault(d => d.IsPrimary)
                        ?? displays.FirstOrDefault();
         _screenshotService.SelectedDisplay = SelectedDisplay?.DeviceName ?? "";
 
-        SavePath = LoadSavePath() ?? GetDefaultScreenshotPath();
+        SavePath = _config.SavePath ?? GetDefaultScreenshotPath();
         _screenshotService.SavePath = SavePath;
 
-        _shortcutModifier = LoadShortcutModifier();
-        _shortcutKey = LoadShortcutKey();
+        _shortcutModifier = _config.ShortcutModifier;
+        _shortcutKey = (VirtualKey)_config.ShortcutKey;
         _screenshotService.PrepareShortcut(_shortcutModifier, _shortcutKey);
         _shortcutRegistry.Register("Screenshot", _shortcutModifier, _shortcutKey);
     }
@@ -163,7 +204,9 @@ public partial class ScreenshotViewModel : ObservableObject
         OnPropertyChanged(nameof(ShortcutKey));
         OnPropertyChanged(nameof(ShortcutKeyNames));
         OnPropertyChanged(nameof(ShortcutDisplayText));
-        SaveShortcut(modifier, key);
+        _config.ShortcutModifier = modifier;
+        _config.ShortcutKey = (uint)key;
+        Save();
         _screenshotService.UpdateHotkey(modifier, key);
         _shortcutRegistry.Register("Screenshot", modifier, key);
         _log.Info($"Shortcut updated to modifier={modifier}, key={key}");
@@ -195,7 +238,8 @@ public partial class ScreenshotViewModel : ObservableObject
 
     partial void OnSavePathChanged(string value)
     {
-        SavePathSetting(value);
+        _config.SavePath = value;
+        Save();
         _screenshotService.SavePath = value;
     }
 
@@ -205,19 +249,12 @@ public partial class ScreenshotViewModel : ObservableObject
         OnPropertyChanged(nameof(StatusSeverity));
     }
 
-    partial void OnIsEnabledChanged(bool value)
-    {
-        SaveIsEnabled(value);
-        _screenshotService.IsEnabled = value;
-        if (!value)
-            StatusMessage = "";
-    }
-
     partial void OnSelectedDisplayChanged(DisplayInfo? value)
     {
         if (value != null)
         {
-            SaveSelectedDisplay(value.DeviceName);
+            _config.SelectedDisplay = value.DeviceName;
+            Save();
             _screenshotService.SelectedDisplay = value.DeviceName;
         }
     }
@@ -315,33 +352,6 @@ public partial class ScreenshotViewModel : ObservableObject
         return Path.Combine(pictures, "Screenshots");
     }
 
-    private static NotificationMode LoadNotificationMode()
-    {
-        try
-        {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue("ScreenshotNotificationMode", out var v) && v is int i)
-                return (NotificationMode)i;
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("Failed to load ScreenshotNotificationMode: {Message}", ex.Message);
-        }
-        return NotificationMode.Text;
-    }
-
-    private static void SaveNotificationMode(NotificationMode mode)
-    {
-        try
-        {
-            ApplicationData.Current.LocalSettings.Values["ScreenshotNotificationMode"] = (int)mode;
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("Failed to save ScreenshotNotificationMode: {Message}", ex.Message);
-        }
-    }
-
     private void SendNotification(string? imagePath)
     {
         if (NotificationMode == NotificationMode.None)
@@ -373,128 +383,15 @@ public partial class ScreenshotViewModel : ObservableObject
         }
     }
 
-    private static bool LoadIsEnabled()
+    private void Save()
     {
         try
         {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue("ScreenshotEnabled", out var v) && v is bool b)
-                return b;
+            _configService.Save(_config);
         }
         catch (Exception ex)
         {
-            Log.Warning("Failed to load ScreenshotEnabled: {Message}", ex.Message);
-        }
-        return true;
-    }
-
-    private static void SaveIsEnabled(bool value)
-    {
-        try
-        {
-            ApplicationData.Current.LocalSettings.Values["ScreenshotEnabled"] = value;
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("Failed to save ScreenshotEnabled: {Message}", ex.Message);
-        }
-    }
-
-    private static string? LoadSavePath()
-    {
-        try
-        {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue("ScreenshotSavePath", out var v) && v is string s)
-                return s;
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("Failed to load ScreenshotSavePath: {Message}", ex.Message);
-        }
-        return null;
-    }
-
-    private static void SavePathSetting(string path)
-    {
-        try
-        {
-            ApplicationData.Current.LocalSettings.Values["ScreenshotSavePath"] = path;
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("Failed to save ScreenshotSavePath: {Message}", ex.Message);
-        }
-    }
-
-    private static string? LoadSelectedDisplay()
-    {
-        try
-        {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue("ScreenshotDisplay", out var v) && v is string s)
-                return s;
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("Failed to load ScreenshotDisplay: {Message}", ex.Message);
-        }
-        return null;
-    }
-
-    private static void SaveSelectedDisplay(string deviceName)
-    {
-        try
-        {
-            ApplicationData.Current.LocalSettings.Values["ScreenshotDisplay"] = deviceName;
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("Failed to save ScreenshotDisplay: {Message}", ex.Message);
-        }
-    }
-
-    private static uint LoadShortcutModifier()
-    {
-        try
-        {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue("ShortcutModifier", out var v) && v is uint u)
-                return u;
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("Failed to load ShortcutModifier: {Message}", ex.Message);
-        }
-        return 0x8;
-    }
-
-    private static VirtualKey LoadShortcutKey()
-    {
-        try
-        {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue("ShortcutKey", out var v) && v is uint u)
-                return (VirtualKey)u;
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("Failed to load ShortcutKey: {Message}", ex.Message);
-        }
-        return VirtualKey.F2;
-    }
-
-    private static void SaveShortcut(uint modifier, VirtualKey key)
-    {
-        try
-        {
-            var settings = ApplicationData.Current.LocalSettings;
-            settings.Values["ShortcutModifier"] = modifier;
-            settings.Values["ShortcutKey"] = (uint)key;
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("Failed to save shortcut: {Message}", ex.Message);
+            _log.Error($"Failed to save config: {ex.Message}");
         }
     }
 }

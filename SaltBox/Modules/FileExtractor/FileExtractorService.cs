@@ -1,36 +1,36 @@
 using Microsoft.Windows.AppNotifications;
 using Microsoft.Windows.AppNotifications.Builder;
+using SaltBox.Contracts;
 using SaltBox.Services;
-using Windows.Storage;
 
 namespace SaltBox.Modules.FileExtractor;
 
 public class FileExtractorService
 {
-    private const string SettingKey = "EnableFileExtractor";
-    private static readonly string SettingsFallbackPath =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SaltBox", "Settings", "FileExtractor.txt");
-    private const string NotificationModeSettingKey = "FileExtractorNotificationMode";
-    private static readonly string NotificationModeFallbackPath =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SaltBox", "Settings", "FileExtractorNotificationMode.txt");
-
     private readonly LogService _log;
     private readonly ContextMenuManager _menuManager;
     private readonly CultureService _lang;
+    private readonly IConfigService _configService;
 
-    public FileExtractorService(LogService log, ContextMenuManager menuManager, CultureService lang)
+    private FileExtractorConfig _config;
+
+    public FileExtractorService(LogService log, ContextMenuManager menuManager, CultureService lang, IConfigService configService)
     {
         _log = log;
         _menuManager = menuManager;
         _lang = lang;
+        _configService = configService;
+        _config = configService.Load<FileExtractorConfig>();
     }
 
     public bool IsEnabled
     {
-        get => LoadIsEnabled();
+        get => _config.IsEnabled;
         set
         {
-            SaveIsEnabled(value);
+            _config.IsEnabled = value;
+            SaveConfig();
+
             var exePath = Environment.ProcessPath;
             if (string.IsNullOrEmpty(exePath))
             {
@@ -107,7 +107,7 @@ public class FileExtractorService
 
     private void TrySendNotification(string rootFolderPath, int success, int failed)
     {
-        if (LoadNotificationModeValue() == 0)
+        if (_config.NotificationMode == 0)
             return;
 
         if (!AppNotificationManager.IsSupported())
@@ -134,38 +134,6 @@ public class FileExtractorService
         }
     }
 
-    private static int LoadNotificationModeValue()
-    {
-        try
-        {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue(NotificationModeSettingKey, out var v) && v is int i)
-                return i;
-        }
-        catch
-        {
-        }
-
-        return LoadNotificationModeFallback();
-    }
-
-    private static int LoadNotificationModeFallback()
-    {
-        try
-        {
-            if (File.Exists(NotificationModeFallbackPath))
-            {
-                var text = File.ReadAllText(NotificationModeFallbackPath).Trim();
-                if (int.TryParse(text, out var val))
-                    return val;
-            }
-        }
-        catch
-        {
-        }
-        return 1;
-    }
-
     private static string GetUniqueFilePath(string folder, string fileName)
     {
         var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
@@ -180,61 +148,15 @@ public class FileExtractorService
         }
     }
 
-    private static bool LoadIsEnabled()
+    private void SaveConfig()
     {
         try
         {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue(SettingKey, out var v) && v is bool b)
-                return b;
+            _configService.Save(_config);
         }
-        catch
+        catch (Exception ex)
         {
-        }
-
-        return LoadIsEnabledFallback();
-    }
-
-    private static void SaveIsEnabled(bool value)
-    {
-        try
-        {
-            ApplicationData.Current.LocalSettings.Values[SettingKey] = value;
-            return;
-        }
-        catch
-        {
-        }
-
-        SaveIsEnabledFallback(value);
-    }
-
-    private static bool LoadIsEnabledFallback()
-    {
-        try
-        {
-            if (File.Exists(SettingsFallbackPath))
-            {
-                var text = File.ReadAllText(SettingsFallbackPath).Trim();
-                return text == "1";
-            }
-        }
-        catch
-        {
-        }
-        return false;
-    }
-
-    private static void SaveIsEnabledFallback(bool value)
-    {
-        try
-        {
-            var dir = Path.GetDirectoryName(SettingsFallbackPath);
-            if (dir != null) Directory.CreateDirectory(dir);
-            File.WriteAllText(SettingsFallbackPath, value ? "1" : "0");
-        }
-        catch
-        {
+            _log.Error($"Failed to save config: {ex.Message}");
         }
     }
 }

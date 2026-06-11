@@ -1,8 +1,10 @@
-using Microsoft.UI.Dispatching;
 using Serilog;
 using System.Runtime.InteropServices;
-using Windows.Graphics.Display;
 using Windows.Graphics.Imaging;
+using Vortice.Direct3D;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
+using WinRT;
 
 namespace SaltBox.Helpers;
 
@@ -10,37 +12,86 @@ public static class HdrHelper
 {
     private static readonly ILogger Log = Serilog.Log.ForContext(typeof(HdrHelper));
 
-    private static bool? _cachedIsHdr;
-    private static DateTime _cacheTime;
-    private static readonly TimeSpan CacheDuration = TimeSpan.FromSeconds(5);
-
-    public static async Task<bool> IsDisplayHdrAsync(DispatcherQueue dispatcher)
+    public static bool IsDisplayHdr(IntPtr hmonitor)
     {
-        if (_cachedIsHdr.HasValue && DateTime.UtcNow - _cacheTime < CacheDuration)
-            return _cachedIsHdr.Value;
-
-        var tcs = new TaskCompletionSource<DisplayInformation?>();
-        dispatcher.TryEnqueue(() =>
-        {
-            try { tcs.TrySetResult(DisplayInformation.GetForCurrentView()); }
-            catch { tcs.TrySetResult(null); }
-        });
-
-        var displayInfo = await tcs.Task;
-        if (displayInfo == null) return false;
-
         try
         {
-            var info = displayInfo.GetAdvancedColorInfo();
-            _cachedIsHdr = info.CurrentAdvancedColorKind == AdvancedColorKind.HighDynamicRange;
-            _cacheTime = DateTime.UtcNow;
-            Log.Information("HDR display detection: {IsHdr} (max nits: {Max}, SDR white: {SdrWhite})",
-                _cachedIsHdr.Value, info.MaxLuminanceInNits, info.SdrWhiteLevelInNits);
-            return _cachedIsHdr.Value;
+            var featureLevels = new[] { FeatureLevel.Level_11_0, FeatureLevel.Level_10_1 };
+            var hr = D3D11.D3D11CreateDevice(
+                null,
+                DriverType.Hardware,
+                DeviceCreationFlags.BgraSupport,
+                featureLevels,
+                out ID3D11Device? d3dDevice,
+                out _,
+                out ID3D11DeviceContext? context);
+            context?.Dispose();
+
+            if (hr.Failure)
+            {
+                Log.Warning("[HDR] D3D11CreateDevice failed: {Result}", hr);
+                return false;
+            }
+
+            using var d3d = d3dDevice;
+            var dxgiDevice = d3d.QueryInterface<IDXGIDevice>();
+            if (dxgiDevice is null) return false;
+
+            using (dxgiDevice)
+            {
+                var adapter = dxgiDevice.GetAdapter();
+                if (adapter is null) return false;
+
+                using (adapter)
+                {
+                    for (int outputIdx = 0; ; outputIdx++)
+                    {
+                        var enumHr = adapter.EnumOutputs(outputIdx, out IDXGIOutput? output);
+                        if (enumHr.Failure || output is null)
+                            break;
+
+                        using (output)
+                        {
+                            var desc = output.Description;
+                            if (desc.Monitor != hmonitor)
+                                continue;
+
+                            var output6 = output.QueryInterfaceOrNull<IDXGIOutput6>();
+                            if (output6 is null)
+                            {
+                                Log.Warning("[HDR] IDXGIOutput6 not available on this system");
+                                return false;
+                            }
+
+                            using (output6)
+                            {
+                                var desc1 = output6.Description1;
+                                var isHdr = desc1.ColorSpace is ColorSpaceType.RgbFullG2084NoneP2020 or ColorSpaceType.RgbFullG10NoneP709;
+
+                                Log.Debug("[HDR] DXGI ColorSpace={ColorSpace} ({Value}), IsHdr={IsHdr}",
+                                    desc1.ColorSpace, (int)desc1.ColorSpace, isHdr);
+
+                                if (isHdr)
+                                    Log.Information("[HDR] HDR display: ColorSpace={ColorSpace}, " +
+                                        "MaxLuminance={MaxLum} nits, SdrWhiteLevel={Sdr} nits",
+                                        desc1.ColorSpace, desc1.MaxLuminance, desc1.MaxFullFrameLuminance);
+                                else
+                                    Log.Information("[HDR] SDR display: ColorSpace={ColorSpace}",
+                                        desc1.ColorSpace);
+
+                                return isHdr;
+                            }
+                        }
+                    }
+                }
+            }
+
+            Log.Warning("[HDR] No DXGI output found for HMONITOR=0x{Monitor:X16}", hmonitor);
+            return false;
         }
         catch (Exception ex)
         {
-            Log.Warning("HDR detection failed: {Ex}", ex.Message);
+            Log.Warning("[HDR] DXGI detection failed: {Message}", ex.Message);
             return false;
         }
     }
@@ -50,7 +101,7 @@ public static class HdrHelper
         using var buffer = hdrBitmap.LockBuffer(BitmapBufferAccessMode.Read);
         using var reference = buffer.CreateReference();
 
-        var byteAccess = (IMemoryBufferByteAccess)reference;
+        var byteAccess = reference.As<IMemoryBufferByteAccess>();
         byteAccess.GetBuffer(out IntPtr dataPtr, out _);
 
         int pixelCount = width * height;

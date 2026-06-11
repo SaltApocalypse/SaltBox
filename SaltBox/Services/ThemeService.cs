@@ -1,19 +1,21 @@
 using Microsoft.UI.Xaml;
+using SaltBox.Config;
+using SaltBox.Contracts;
 using Serilog;
-using Windows.Storage;
 
 namespace SaltBox.Services;
 
 public class ThemeService
 {
-    private const string SettingsKey = "AppTheme";
+    private readonly IConfigService _config;
 
     public ElementTheme CurrentTheme { get; private set; }
 
     public event Action<ElementTheme>? ThemeChanged;
 
-    public ThemeService()
+    public ThemeService(IConfigService config)
     {
+        _config = config;
         CurrentTheme = LoadTheme();
     }
 
@@ -29,13 +31,13 @@ public class ThemeService
         ThemeChanged?.Invoke(theme);
     }
 
-    private static ElementTheme LoadTheme()
+    private ElementTheme LoadTheme()
     {
         try
         {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue(SettingsKey, out var value) && value is string str)
-                return Enum.TryParse<ElementTheme>(str, out var theme) ? theme : ElementTheme.Default;
+            var appConfig = _config.Load<AppConfig>();
+            if (Enum.TryParse<ElementTheme>(appConfig.Theme, out var theme))
+                return theme;
         }
         catch (Exception ex)
         {
@@ -45,12 +47,13 @@ public class ThemeService
         return ElementTheme.Default;
     }
 
-    private static void SaveTheme(ElementTheme theme)
+    private void SaveTheme(ElementTheme theme)
     {
         try
         {
-            var settings = ApplicationData.Current.LocalSettings;
-            settings.Values[SettingsKey] = theme.ToString();
+            var appConfig = _config.Load<AppConfig>();
+            appConfig.Theme = theme.ToString();
+            _config.Save(appConfig);
         }
         catch (Exception ex)
         {

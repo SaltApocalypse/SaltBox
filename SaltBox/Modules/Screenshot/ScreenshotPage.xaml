@@ -47,7 +47,7 @@
                     <InfoBar
                         Severity="{x:Bind ViewModel.StatusSeverity, Mode=OneWay}"
                         IsOpen="{x:Bind ViewModel.HasStatusMessage, Mode=OneWay}"
-                        IsClosable="False"
+                        IsClosable="True"
                         Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
                 </StackPanel>
             </StackPanel>
@@ -179,6 +179,32 @@
                         IsClosable="False"
                         IsOpen="{x:Bind ViewModel.HasNotificationHint, Mode=OneWay}"
                         Message="{x:Bind ViewModel.Lang.CommonNotificationSystemHint, Mode=OneWay}" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Spacing="12">
+                <TextBlock
+                    Text="{x:Bind ViewModel.Lang.ScreenshotExperimental, Mode=OneWay}"
+                    Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <StackPanel Spacing="0">
+                    <controls:SettingsCard
+                        IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
+                        Header="{x:Bind ViewModel.Lang.ScreenshotHdrMode, Mode=OneWay}"
+                        Description="{x:Bind ViewModel.Lang.ScreenshotHdrDiagnosticsDesc, Mode=OneWay}">
+                        <ComboBox
+                            SelectedIndex="{x:Bind ViewModel.HdrModeIndex, Mode=TwoWay}"
+                            MinWidth="160"
+                            HorizontalAlignment="Right">
+                            <ComboBoxItem Content="{x:Bind ViewModel.Lang.ScreenshotHdrModeAuto, Mode=OneWay}" />
+                            <ComboBoxItem Content="{x:Bind ViewModel.Lang.ScreenshotHdrForceHdr, Mode=OneWay}" />
+                            <ComboBoxItem Content="{x:Bind ViewModel.Lang.ScreenshotHdrForceSdr, Mode=OneWay}" />
+                        </ComboBox>
+                    </controls:SettingsCard>
+                    <InfoBar
+                        Severity="Informational"
+                        IsClosable="False"
+                        IsOpen="True"
+                        Message="{x:Bind ViewModel.Lang.ScreenshotHdrModeHint, Mode=OneWay}" />
                 </StackPanel>
             </StackPanel>
 

@@ -68,20 +68,34 @@ SaltBox/
 │   │   ├── UpdateService.cs
 │   │   ├── ShortcutRegistry.cs
 │   │   ├── ContextMenuManager.cs
+│   │   ├── ConfigService.cs         # JSON config store
 │   │   └── InMemoryLogSink.cs
 │   ├── Contracts/
-│   │   └── IToolModule.cs
+│   │   ├── IToolModule.cs
+│   │   ├── IConfigService.cs        # Config store interface
+│   │   ├── IConfigMigration.cs      # Config upgrade interface
+│   │   └── ConfigFileNameAttribute.cs
 │   ├── Models/
+│   ├── Config/                      # Configuration data
+│   │   ├── appsettings.json         # Build-time app settings (Update URL, etc.)
+│   │   ├── ConfigBase.cs            # Abstract base (ConfigVersion + LastUpdatedUtc)
+│   │   └── AppConfig.cs             # Global settings (Theme, Language, Version)
 │   ├── Helpers/
 │   ├── Extensions/                  # Available for future use
 │   ├── Controls/                    # Custom controls (e.g. KeyCap)
 │   ├── Converters/                  # Value converters
 │   ├── Modules/                     # Tool modules (one folder per tool)
 │   │   ├── FileExtractor/
+│   │   │   ├── FileExtractorPage.xaml / .cs
+│   │   │   ├── FileExtractorViewModel.cs
+│   │   │   ├── FileExtractorService.cs
+│   │   │   └── FileExtractorConfig.cs
 │   │   ├── Screenshot/
+│   │   │   ├── ScreenshotPage.xaml / .cs
+│   │   │   ├── ScreenshotViewModel.cs
+│   │   │   ├── ScreenshotService.cs
+│   │   │   └── ScreenshotConfig.cs
 │   │   └── DeveloperMode/
-│   ├── Config/
-│   │   └── appsettings.json
 │   ├── Assets/
 │   └── Logs/
 ```
@@ -107,6 +121,8 @@ Modules/JsonFormatter/
 - JsonFormatterViewModel.cs
 - JsonFormatterService.cs
 ```
+
+Modules with persisted settings also include a `*Config.cs` file (see [Configuration System](#configuration-system)).
 
 When adding a new module:
 
@@ -158,7 +174,7 @@ public sealed partial class HomePage : Page
 
 - Managed by `ThemeService` (singleton).
 - Supports three modes: Default (follow system), Dark, Light.
-- User selection is persisted in `ApplicationData.LocalSettings`.
+- User selection is persisted in `AppConfig` via `IConfigService`.
 - Apply via `rootElement.RequestedTheme = ...`.
 - Theme changes take effect immediately.
 
@@ -186,7 +202,7 @@ public sealed partial class HomePage : Page
 
 - Use `Microsoft.Windows.AppNotifications.AppNotificationManager` + `AppNotificationBuilder`.
 - Three modes: `None` (silent), `Text` (toast with status), `Preview` (toast + thumbnail).
-- Notification mode is persisted in `ApplicationData.LocalSettings["ScreenshotNotificationMode"]`.
+- Notification mode is persisted in `ScreenshotConfig.NotificationMode` via `IConfigService`.
 - Always call `AppNotificationManager.IsSupported()` before `Register()` or `Show()`.
 - Call `AppNotificationManager.Default.Register()` in `MainWindow.OnLoaded()` under try-catch.
 - Set `SetScenario(AppNotificationScenario.Urgent)` to bypass Focus Assist silently (no sound).
@@ -196,6 +212,94 @@ public sealed partial class HomePage : Page
   - Hotkey: `ScreenshotService.TrySendNotification()` (singleton service, always alive).
   - Button: `ScreenshotViewModel.SendNotification()` (transient ViewModel).
 - Add an `InfoBar` in the settings page to remind users to enable system notifications when notification mode is not `None`.
+
+# Configuration System
+
+SaltBox 使用基于 JSON 文件的模块化配置系统，不依赖 `ApplicationData.Current.LocalSettings`。
+
+## 架构概览
+
+```
+IConfigService (Contracts/IConfigService.cs)
+  └─ ConfigService (Services/ConfigService.cs)
+       ├─ 泛型 LoadAsync<T>() / SaveAsync<T>()
+       ├─ [ConfigFileName] 特性 → 文件名（与类型解耦）
+       ├─ ConfigBase 基类：ConfigVersion + LastUpdatedUtc
+       ├─ 原子写入：File.Replace → File.Move 回退
+       ├─ 损坏恢复：备份 → 返回默认
+       ├─ 线程安全：SemaphoreSlim 逐文件锁 (Save 独占)
+       └─ 自动升级链：IConfigMigration<T>
+```
+
+## 配置目录结构
+
+```
+%LOCALAPPDATA%\SaltBox\
+├── config/     ← 所有 JSON 配置（IConfigService 写入）
+│   ├── app.json
+│   ├── screenshot.json
+│   └── fileextractor.json
+├── data/       ← 模块用户数据（IConfigService 不碰）
+├── cache/      ← 预留
+├── logs/       ← Serilog 日志
+└── temp/       ← 预留
+```
+
+首次启动自动创建所有目录。
+
+## 配置模型规则
+
+每个模块拥有自己的 `*Config.cs`，继承 `ConfigBase`，标注 `[ConfigFileName]`。
+
+```csharp
+[ConfigFileName("screenshot")]
+public class ScreenshotConfig : ConfigBase
+{
+    public bool IsEnabled { get; set; } = true;
+    public int NotificationMode { get; set; } = 1;
+    // ...
+}
+```
+
+- `ConfigBase` 提供 `ConfigVersion`（升级用）和 `LastUpdatedUtc`（自动更新）。
+- 文件名通过 `[ConfigFileName]` 特性标注，不依赖类型名。
+- 模块不存在时不产生对应配置文件（ConfigService 是被动的，只响应调用）。
+
+## 接口
+
+```csharp
+public interface IConfigService
+{
+    Task<T> LoadAsync<T>() where T : ConfigBase, new();
+    Task SaveAsync<T>(T config) where T : ConfigBase;
+    T Load<T>() where T : ConfigBase, new();    // 同步包装
+    void Save<T>(T config) where T : ConfigBase; // 同步包装
+}
+```
+
+## 升级扩展点
+
+```csharp
+public interface IConfigMigration<T> where T : ConfigBase
+{
+    int FromVersion { get; }
+    int ToVersion { get; }
+    T Migrate(T config);
+}
+```
+
+在 DI 中注册后，`ConfigService.LoadAsync` 自动链式调用迁移。
+
+## 使用规则
+
+1. 所有模块配置通过 `IConfigService` 读写，不可直接操作文件。
+2. 配置模型放在模块目录（`Modules/<ToolName>/<ToolName>Config.cs`）。
+3. 全局配置 (`AppConfig`) 放在 `Config/AppConfig.cs`。
+4. 首次使用配置的模块在构造函数中 `_config = _configService.Load<T>()`。
+5. 每次属性变更时更新 `_config` 并调用 `Save()`。
+6. 配置模型使用 `int` 而非 `enum` 存储，ViewModel 层做 int ↔ enum 转换。
+7. 新增配置模型必须标注 `[ConfigFileName("...")]`。
+8. 新增配置模型在 `App.xaml.cs` 中无需额外注册（ConfigService 通过泛型调用自动发现）。
 
 # Logging Guidelines
 
@@ -300,13 +404,14 @@ Examples:
 - Update source URL is configurable via `appsettings.json` → `Update:Url`.
 - If no URL is configured, the check button shows "Update source not configured".
 - Settings page shows a `SettingsExpander` section with Check/Download/Install buttons based on `UpdateStatus`.
-- Use `Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)` for settings storage (fallback when sparse package not registered).
+- Use `Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)` for settings storage (the same base path as the JSON config system).
 - The `vpk` CLI tool is required for packaging: `dotnet tool install -g vpk`.
 - Package command: `vpk pack --packId SaltBox --packVersion <version> --packDir <publish> --mainExe SaltBox.exe`.
 
 # Sparse Package (Identity Package) Rules
 
-- Identity package (`SaltBox.Identity.msix`) provides package identity for notifications (`AppNotificationManager`), `Package.Current`, and `ApplicationData.Current`.
+- Identity package (`SaltBox.Identity.msix`) provides package identity for notifications (`AppNotificationManager`) and `Package.Current`.
+- **Settings persistence no longer depends on `ApplicationData.Current`** — all settings use `IConfigService` with JSON files in `%LOCALAPPDATA%\SaltBox\config\`.
 - Built by `IdentityPackage/BuildIdentityPackage.cmd` using `MakeAppx.exe` + optional `SignTool.exe`.
 - Must be signed for production (self-signed cert works if installed to Trusted People store on target machine).
 - Must be present next to `SaltBox.exe` in the publish directory.

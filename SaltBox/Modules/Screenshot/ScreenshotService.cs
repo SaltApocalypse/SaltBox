@@ -23,6 +23,13 @@ using SaltBox.Services;
 
 namespace SaltBox.Modules.Screenshot;
 
+public enum HdrMode
+{
+    Auto,
+    ForceHdr,
+    ForceSdr
+}
+
 public class DisplayInfo
 {
     public int Index { get; set; }
@@ -56,6 +63,7 @@ public class ScreenshotService
     public bool IsEnabled { get; set; } = true;
     public string SavePath { get; set; } = "";
     public string SelectedDisplay { get; set; } = "";
+    public HdrMode HdrModeOverride { get; set; } = HdrMode.Auto;
 
     private bool _hotkeyRegistered;
     private SUBCLASSPROC? _subclassDelegate;
@@ -547,12 +555,23 @@ public class ScreenshotService
         var captureId = Guid.NewGuid().ToString("N")[..8].ToUpper();
         Directory.CreateDirectory(saveFolder);
 
-        var isHdr = await HdrHelper.IsDisplayHdrAsync(_uiDispatcher);
+        _log.Debug($"[HDR:{captureId}] Display={display.DeviceName}, FriendlyName={display.FriendlyName}, " +
+                   $"Resolution={display.Width}x{display.Height}, IsPrimary={display.IsPrimary}, " +
+                   $"HMonitor=0x{display.HMonitor:X16}");
+
+        var isHdr = HdrModeOverride switch
+        {
+            HdrMode.ForceHdr => true,
+            HdrMode.ForceSdr => false,
+            _ => HdrHelper.IsDisplayHdr(display.HMonitor)
+        };
+
+        _log.Debug($"[HDR:{captureId}] Mode={HdrModeOverride}, IsHdrDetected={isHdr}");
 
         if (isHdr)
-            _log.Info($"[HDR:{captureId}] HDR display detected");
+            _log.Info($"[HDR:{captureId}] HDR display detected (mode={HdrModeOverride})");
         else
-            _log.Info($"[HDR:{captureId}] SDR display detected");
+            _log.Info($"[HDR:{captureId}] SDR display detected (mode={HdrModeOverride})");
 
         // Try D3D capture first; fall back to GDI BitBlt if D3D is unavailable
         try
@@ -585,6 +604,7 @@ public class ScreenshotService
                 ? DirectXPixelFormat.R16G16B16A16Float
                 : DirectXPixelFormat.B8G8R8A8UIntNormalized;
 
+            _log.Debug($"[HDR:{captureId}] Mode={HdrModeOverride}, IsHdrDetected={isHdr}, PixelFormat={pixelFormat}");
             _log.Debug($"[Capture:{captureId}] Creating FramePool (format: {pixelFormat})");
 
             framePool = Direct3D11CaptureFramePool.Create(
@@ -625,25 +645,31 @@ public class ScreenshotService
             using var frame = await tcs.Task;
             _log.Info($"[Capture:{captureId}] Frame received");
 
+            var frameSize = frame.ContentSize;
+            _log.Debug($"[HDR:{captureId}] Frame ContentSize={frameSize.Width}x{frameSize.Height}");
+
             var softwareBitmap = await SoftwareBitmap.CreateCopyFromSurfaceAsync(
                 frame.Surface, BitmapAlphaMode.Ignore);
+
+            _log.Debug($"[HDR:{captureId}] Surface format={softwareBitmap.BitmapPixelFormat}");
 
             // Check if the SoftwareBitmap preserved FP16 format (HDR path)
             if (isHdr && softwareBitmap.BitmapPixelFormat != BitmapPixelFormat.Bgra8)
             {
-                _log.Info($"[HDR:{captureId}] FP16 frame detected — applying ACES tone mapping");
+                _log.Info($"[HDR:{captureId}] FP16 frame — applying ACES tone mapping");
+                _log.Debug($"[HDR:{captureId}] ToneMapping=True, InputFormat={softwareBitmap.BitmapPixelFormat}, OutputFormat=Bgra8");
                 var size = captureItem.Size;
                 var pixels = HdrHelper.ConvertFp16ToSdrPixels(softwareBitmap, size.Width, size.Height);
-                _log.Info($"[HDR:{captureId}] SDR conversion complete");
-                return await SavePixelsAsync(pixels, size.Width, size.Height, saveFolder);
+                _log.Info($"[HDR:{captureId}] ACES tone mapping complete");
+                return await SavePixelsAsync(pixels, size.Width, size.Height, saveFolder, toneMapped: true);
             }
 
             if (isHdr)
-                _log.Info($"[HDR:{captureId}] HDR display detected but frame is SDR — tone mapping skipped");
+                _log.Info($"[HDR:{captureId}] HDR display but frame is SDR — tone mapping skipped");
             else
-                _log.Info($"[HDR:{captureId}] SDR display — tone mapping skipped");
+                _log.Debug($"[HDR:{captureId}] ToneMapping=False (SDR input)");
 
-            return await SaveSoftwareBitmapAsync(softwareBitmap, saveFolder);
+            return await SaveSoftwareBitmapAsync(softwareBitmap, saveFolder, toneMapped: false);
         }
         finally
         {
@@ -718,7 +744,7 @@ public class ScreenshotService
         }
     }
 
-    private static async Task<string?> SaveSoftwareBitmapAsync(SoftwareBitmap softwareBitmap, string saveFolder)
+    private static async Task<string?> SaveSoftwareBitmapAsync(SoftwareBitmap softwareBitmap, string saveFolder, bool toneMapped = false)
     {
         var now = DateTime.Now;
         var fileName = $"Screenshot_{now:yyyy-MM-dd_HH-mm-ss}.png";
@@ -729,10 +755,11 @@ public class ScreenshotService
         encoder.SetSoftwareBitmap(softwareBitmap);
         await encoder.FlushAsync();
         Log.Information($"Screenshot saved: {file.Path}");
+        Log.Debug($"[HDR] Output={file.Path}, Format=PNG, ToneMapped={toneMapped}, ColorSpaceConverted=false");
         return file.Path;
     }
 
-    private static async Task<string?> SavePixelsAsync(byte[] pixels, int width, int height, string saveFolder)
+    private static async Task<string?> SavePixelsAsync(byte[] pixels, int width, int height, string saveFolder, bool toneMapped = false)
     {
         var now = DateTime.Now;
         var fileName = $"Screenshot_{now:yyyy-MM-dd_HH-mm-ss}.png";
@@ -749,6 +776,7 @@ public class ScreenshotService
             pixels);
         await encoder.FlushAsync();
         Log.Information($"Screenshot saved: {file.Path}");
+        Log.Debug($"[HDR] Output={file.Path}, Format=PNG, ToneMapped={toneMapped}, ColorSpaceConverted=true");
         return file.Path;
     }
 
@@ -784,9 +812,20 @@ public class ScreenshotService
 
                 Log.Debug($"[DXGI:{captureId}] Querying IDXGIDevice");
                 var dxgiDevice = d3dDevice.QueryInterface<IDXGIDevice>();
-                Log.Debug($"[DXGI:{captureId}] IDXGIDevice acquired");
 
-                Log.Debug($"[WinRT:{captureId}] Creating IDirect3DDevice via CreateDirect3D11DeviceFromDXGIDevice (D3D11.dll)");
+                try
+                {
+                    var dxgiAdapter = dxgiDevice.GetAdapter();
+                    var adapterDesc = dxgiAdapter.Description;
+                    Log.Debug($"[HDR:{captureId}] Adapter={adapterDesc.Description}, VendorId=0x{adapterDesc.VendorId:X4}, DeviceId=0x{adapterDesc.DeviceId:X4}, DedicatedVideoMemory={adapterDesc.DedicatedVideoMemory / (1024 * 1024)} MB");
+                    dxgiAdapter.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning($"[HDR:{captureId}] Failed to query DXGI adapter info: {ex.Message}");
+                }
+
+                Log.Debug($"[WinRT:{captureId}] Creating IDirect3DDevice via CreateDirect3D11DeviceFromDXGIDevice");
 
                 var d3d11Handle = GetModuleHandle("d3d11.dll");
                 if (d3d11Handle == IntPtr.Zero)
@@ -810,7 +849,7 @@ public class ScreenshotService
             {
                 lastException = ex;
                 Log.Warning(ex, $"[D3D:{captureId}] Hardware device creation failed");
-                Log.Information($"[D3D:{captureId}] Falling back to WARP");
+                Log.Warning($"[D3D:{captureId}] Falling back to WARP");
             }
         }
 
@@ -820,8 +859,6 @@ public class ScreenshotService
 
     private static GraphicsCaptureItem CreateCaptureItemForMonitor(nint hMonitor)
     {
-        Log.Debug("CreateCaptureItemForMonitor: hMonitor=0x{HMonitor:X16}", hMonitor);
-
         var factory = GetCaptureItemFactory();
 
         try

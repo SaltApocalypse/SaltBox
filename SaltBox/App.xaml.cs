@@ -5,6 +5,8 @@ using Microsoft.UI.Xaml;
 using Serilog;
 using Windows.Management.Deployment;
 using Windows.Storage;
+using SaltBox.Config;
+using SaltBox.Contracts;
 using SaltBox.Modules.DeveloperMode;
 using SaltBox.Modules.FileExtractor;
 using SaltBox.Modules.Screenshot;
@@ -121,6 +123,7 @@ public partial class App : Application
                 services.AddSingleton<UpdateService>();
                 services.AddSingleton<MainWindow>();
                 services.AddSingleton<MainViewModel>();
+                services.AddSingleton<IConfigService, ConfigService>();
                 services.AddSingleton<InMemoryLogSink>(_ => _memorySink!);
                 services.AddSingleton<DeveloperModeService>();
                 services.AddSingleton<ContextMenuManager>();
@@ -170,6 +173,9 @@ public partial class App : Application
 
         var log = _host.Services.GetRequiredService<LogService>();
         log.Info("SaltBox launched");
+
+        var configService = _host.Services.GetRequiredService<IConfigService>();
+        configService.EnsureDirectories();
 
         if (_isFirstRun)
         {

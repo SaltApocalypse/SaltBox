@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using SaltBox.Services;
 using System.Diagnostics;
 using Windows.ApplicationModel.DataTransfer;
@@ -22,7 +23,10 @@ public partial class DeveloperModeViewModel : ObservableObject
     private string _exportStatusText = "";
 
     [ObservableProperty]
-    private Visibility _showExportResult = Visibility.Collapsed;
+    private bool _isExportResultVisible;
+
+    [ObservableProperty]
+    private InfoBarSeverity _exportResultSeverity;
 
     public LogLevelFilter[] LogLevels => Enum.GetValues<LogLevelFilter>();
 
@@ -87,12 +91,14 @@ public partial class DeveloperModeViewModel : ObservableObject
             var filePath = Path.Combine(logDir, fileName);
             await File.WriteAllTextAsync(filePath, FullLogText);
             ExportStatusText = $"{Lang.DevExportSuccess}: {filePath}";
-            ShowExportResult = Visibility.Visible;
+            ExportResultSeverity = InfoBarSeverity.Success;
+            IsExportResultVisible = true;
         }
         catch (Exception ex)
         {
             ExportStatusText = $"{Lang.DevExportFailed}: {ex.Message}";
-            ShowExportResult = Visibility.Visible;
+            ExportResultSeverity = InfoBarSeverity.Error;
+            IsExportResultVisible = true;
         }
     }
 
