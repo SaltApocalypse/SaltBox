@@ -6,6 +6,7 @@ namespace SaltBox.Services.ExplorerIntegration;
 [ConfigFileName("explorer-actions")]
 public class ExplorerActionConfig : ConfigBase
 {
+    public bool IsEnabled { get; set; } = false;
     public List<ExplorerActionItem> CustomActions { get; set; } = new();
 }
 

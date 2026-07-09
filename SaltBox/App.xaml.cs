@@ -9,6 +9,7 @@ using SaltBox.Config;
 using SaltBox.Contracts;
 using SaltBox.Modules.DeveloperMode;
 using SaltBox.Modules.FileExtractor;
+using SaltBox.Modules.CustomExplorerActions;
 using SaltBox.Modules.Screenshot;
 using SaltBox.Services;
 using SaltBox.Services.ExplorerIntegration;
@@ -140,6 +141,8 @@ public partial class App : Application
                 services.AddTransient<SettingsViewModel>();
                 services.AddTransient<FileExtractorViewModel>();
                 services.AddTransient<FileExtractorPage>();
+                services.AddTransient<CustomExplorerActionsViewModel>();
+                services.AddTransient<CustomExplorerActionsPage>();
                 services.AddTransient<HomePage>();
                 services.AddTransient<ScreenshotPage>();
                 services.AddTransient<SettingsPage>();

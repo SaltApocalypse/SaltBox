@@ -46,6 +46,9 @@
                 <controls:NavigationViewItem
                     Tag="FileExtractor" Icon="Folder"
                     Content="{x:Bind Lang.NavFileExtractor, Mode=OneWay}" />
+                <controls:NavigationViewItem
+                    Tag="CustomExplorerActions" Icon="Folder"
+                    Content="{x:Bind Lang.NavCustomActions, Mode=OneWay}" />
             </controls:NavigationView.MenuItems>
 
             <controls:NavigationView.FooterMenuItems>

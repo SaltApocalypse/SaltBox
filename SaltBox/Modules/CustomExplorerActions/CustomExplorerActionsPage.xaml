@@ -1,0 +1,93 @@
+<Page
+    x:Class="SaltBox.Modules.CustomExplorerActions.CustomExplorerActionsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SaltBox.Modules.CustomExplorerActions"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls">
+
+    <ScrollViewer>
+        <StackPanel Spacing="24" Margin="36,36,36,24">
+
+            <TextBlock
+                Text="{x:Bind ViewModel.Lang.CustomActionsDescription, Mode=OneWay}"
+                Style="{StaticResource BodyTextBlockStyle}"
+                TextWrapping="Wrap" />
+
+            <controls:SettingsCard
+                Header="{x:Bind ViewModel.Lang.CustomActionsEnable, Mode=OneWay}"
+                Description="{x:Bind ViewModel.Lang.CustomActionsEnableDescription, Mode=OneWay}">
+                <ToggleSwitch
+                    IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
+                    OnContent="{x:Bind ViewModel.Lang.CommonOn, Mode=OneWay}"
+                    OffContent="{x:Bind ViewModel.Lang.CommonOff, Mode=OneWay}"
+                    HorizontalAlignment="Right" />
+            </controls:SettingsCard>
+
+            <ContentControl
+                IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch">
+            <StackPanel Spacing="12">
+                <TextBlock
+                    Text="{x:Bind ViewModel.Lang.CustomActionsHandlersConfig, Mode=OneWay}"
+                    Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                <ItemsControl ItemsSource="{x:Bind ViewModel.Actions, Mode=OneWay}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="12" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="local:ActionItemViewModel">
+                            <controls:SettingsExpander
+                                Header="{x:Bind DisplayHeader, Mode=OneWay}"
+                                Description="{x:Bind CommandPath, Mode=OneWay}"
+                                IsExpanded="False">
+
+                                <controls:SettingsExpander.HeaderIcon>
+                                    <FontIcon Glyph="&#xE7F8;" />
+                                </controls:SettingsExpander.HeaderIcon>
+
+                                <controls:SettingsExpander.Content>
+                                    <ToggleSwitch
+                                        IsOn="{x:Bind IsEnabled, Mode=TwoWay}"
+                                        HorizontalAlignment="Right" />
+                                </controls:SettingsExpander.Content>
+
+                                <controls:SettingsExpander.Items>
+                                    <controls:SettingsCard
+                                        Header="{x:Bind Lang.CustomActionsAliasLabel, Mode=OneWay}">
+                                        <TextBox
+                                            Text="{x:Bind Alias, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            MinWidth="200"
+                                            HorizontalAlignment="Right"
+                                            PlaceholderText="{x:Bind AppName, Mode=OneWay}" />
+                                    </controls:SettingsCard>
+                                    <controls:SettingsCard
+                                        Header="{x:Bind Lang.CustomActionsDeleteHeader, Mode=OneWay}">
+                                        <Button
+                                            HorizontalAlignment="Right"
+                                            Command="{x:Bind DeleteCommand}"
+                                            Content="{x:Bind Lang.CustomActionsDeleteButton, Mode=OneWay}" />
+                                    </controls:SettingsCard>
+                                </controls:SettingsExpander.Items>
+                            </controls:SettingsExpander>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Button
+                    Command="{x:Bind ViewModel.AddActionCommand}"
+                    HorizontalAlignment="Left">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE710;" FontSize="14" />
+                        <TextBlock Text="{x:Bind ViewModel.Lang.CustomActionsAdd, Mode=OneWay}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            </ContentControl>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

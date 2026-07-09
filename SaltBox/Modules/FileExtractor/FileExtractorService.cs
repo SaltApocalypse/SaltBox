@@ -13,7 +13,7 @@ public class FileExtractorService : IExplorerActionHandler
     private readonly IConfigService _configService;
     private FileExtractorConfig _config;
 
-    string IExplorerActionHandler.ActionId => "SaltBox.FileExtractor";
+    string IExplorerActionHandler.ActionId => "SaltBox.BA.FileExtractor";
     ExplorerTarget IExplorerActionHandler.Target => ExplorerTarget.Directory;
     string IExplorerActionHandler.DisplayName => "文件提取";
 

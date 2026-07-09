@@ -129,6 +129,15 @@ public partial class CultureService : ObservableObject
             ["ScreenshotHdrExport"] = "Export to file",
             ["ScreenshotHdrExportSuccess"] = "HDR diagnostic info exported",
             ["ScreenshotHdrExportFailed"] = "HDR diagnostic info export failed",
+            ["NavCustomActions"] = "Custom Handler",
+            ["CustomActionsDescription"] = "Configure custom right-click menu actions in File Explorer. Add executables, scripts, or batch files to automate operations on files or folders.",
+            ["CustomActionsEnable"] = "Enable Custom Handlers",
+            ["CustomActionsEnableDescription"] = "Add custom actions to File Explorer right-click menu",
+            ["CustomActionsHandlersConfig"] = "Handler Configuration",
+            ["CustomActionsAliasLabel"] = "Alias",
+            ["CustomActionsDeleteHeader"] = "Delete",
+            ["CustomActionsDeleteButton"] = "Delete",
+            ["CustomActionsAdd"] = "Add Program",
         },
         ["zh-CN"] = new()
         {
@@ -247,6 +256,15 @@ public partial class CultureService : ObservableObject
             ["ScreenshotHdrExport"] = "导出到文件",
             ["ScreenshotHdrExportSuccess"] = "HDR诊断信息已导出",
             ["ScreenshotHdrExportFailed"] = "HDR诊断信息导出失败",
+            ["NavCustomActions"] = "自定义处理程序",
+            ["CustomActionsDescription"] = "在文件资源管理器右键菜单中配置自定义操作。您可以添加可执行程序、脚本或批处理文件，对文件或文件夹执行自动化操作。",
+            ["CustomActionsEnable"] = "启用自定义处理程序",
+            ["CustomActionsEnableDescription"] = "在文件资源管理器右键菜单中添加自定义操作",
+            ["CustomActionsHandlersConfig"] = "处理程序配置",
+            ["CustomActionsAliasLabel"] = "别名",
+            ["CustomActionsDeleteHeader"] = "删除",
+            ["CustomActionsDeleteButton"] = "删除",
+            ["CustomActionsAdd"] = "添加程序",
         }
     };
 
@@ -392,6 +410,15 @@ public partial class CultureService : ObservableObject
     public string ScreenshotHdrExport => _strings.GetValueOrDefault(nameof(ScreenshotHdrExport), "Export to file");
     public string ScreenshotHdrExportSuccess => _strings.GetValueOrDefault(nameof(ScreenshotHdrExportSuccess), "HDR diagnostic info exported");
     public string ScreenshotHdrExportFailed => _strings.GetValueOrDefault(nameof(ScreenshotHdrExportFailed), "HDR diagnostic info export failed");
+    public string NavCustomActions => _strings.GetValueOrDefault(nameof(NavCustomActions), "Custom Handler");
+    public string CustomActionsDescription => _strings.GetValueOrDefault(nameof(CustomActionsDescription), "Configure custom right-click menu actions in File Explorer.");
+    public string CustomActionsEnable => _strings.GetValueOrDefault(nameof(CustomActionsEnable), "Enable Custom Handlers");
+    public string CustomActionsEnableDescription => _strings.GetValueOrDefault(nameof(CustomActionsEnableDescription), "Add custom actions to File Explorer right-click menu");
+    public string CustomActionsHandlersConfig => _strings.GetValueOrDefault(nameof(CustomActionsHandlersConfig), "Handler Configuration");
+    public string CustomActionsAliasLabel => _strings.GetValueOrDefault(nameof(CustomActionsAliasLabel), "Alias");
+    public string CustomActionsDeleteHeader => _strings.GetValueOrDefault(nameof(CustomActionsDeleteHeader), "Delete");
+    public string CustomActionsDeleteButton => _strings.GetValueOrDefault(nameof(CustomActionsDeleteButton), "Delete");
+    public string CustomActionsAdd => _strings.GetValueOrDefault(nameof(CustomActionsAdd), "Add Program");
 
     public void SetCulture(string code)
     {

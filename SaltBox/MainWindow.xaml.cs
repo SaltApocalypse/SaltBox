@@ -7,6 +7,7 @@ using Microsoft.Windows.AppLifecycle;
 using Microsoft.Windows.AppNotifications;
 using SaltBox.Modules.DeveloperMode;
 using SaltBox.Modules.FileExtractor;
+using SaltBox.Modules.CustomExplorerActions;
 using SaltBox.Modules.Screenshot;
 using SaltBox.Services;
 using SaltBox.Views;
@@ -90,6 +91,7 @@ public sealed partial class MainWindow : Window
                 "Home" => Lang.NavHome,
                 "Screenshot" => Lang.NavScreenshot,
                 "FileExtractor" => Lang.NavFileExtractor,
+                "CustomExplorerActions" => Lang.NavCustomActions,
                 "DeveloperMode" => Lang.NavDeveloperMode,
                 "Settings" => Lang.SettingsTitle,
                 _ => ""
@@ -233,6 +235,7 @@ public sealed partial class MainWindow : Window
             "Home" => typeof(HomePage),
             "Screenshot" => typeof(ScreenshotPage),
             "FileExtractor" => typeof(FileExtractorPage),
+            "CustomExplorerActions" => typeof(CustomExplorerActionsPage),
             "DeveloperMode" => typeof(DeveloperModePage),
             "Settings" => typeof(SettingsPage),
             _ => null
@@ -252,6 +255,7 @@ public sealed partial class MainWindow : Window
             "Home" => Lang.NavHome,
             "Screenshot" => Lang.NavScreenshot,
             "FileExtractor" => Lang.NavFileExtractor,
+            "CustomExplorerActions" => Lang.NavCustomActions,
             "DeveloperMode" => Lang.NavDeveloperMode,
             "Settings" => Lang.SettingsTitle,
             _ => ""
