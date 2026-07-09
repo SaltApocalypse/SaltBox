@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using SaltBox.Contracts;
 using SaltBox.Services;
+using SaltBox.Services.ExplorerIntegration;
 
 namespace SaltBox.Modules.FileExtractor;
 
@@ -13,6 +14,7 @@ public enum FileExtractorNotificationMode
 public partial class FileExtractorViewModel : ObservableObject
 {
     private readonly FileExtractorService _fileExtractorService;
+    private readonly ExplorerActionManager _actionManager;
     private readonly IConfigService _configService;
     private FileExtractorConfig _config;
 
@@ -40,10 +42,11 @@ public partial class FileExtractorViewModel : ObservableObject
         SaveConfig();
     }
 
-    public FileExtractorViewModel(CultureService lang, FileExtractorService fileExtractorService, IConfigService configService)
+    public FileExtractorViewModel(CultureService lang, FileExtractorService fileExtractorService, ExplorerActionManager actionManager, IConfigService configService)
     {
         Lang = lang;
         _fileExtractorService = fileExtractorService;
+        _actionManager = actionManager;
         _configService = configService;
         _config = configService.Load<FileExtractorConfig>();
 
@@ -57,6 +60,7 @@ public partial class FileExtractorViewModel : ObservableObject
     partial void OnIsEnabledChanged(bool value)
     {
         _fileExtractorService.IsEnabled = value;
+        _actionManager.RefreshHandler(_fileExtractorService);
     }
 
     private void SaveConfig()

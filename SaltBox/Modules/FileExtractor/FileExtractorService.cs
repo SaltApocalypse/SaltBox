@@ -2,22 +2,24 @@ using Microsoft.Windows.AppNotifications;
 using Microsoft.Windows.AppNotifications.Builder;
 using SaltBox.Contracts;
 using SaltBox.Services;
+using SaltBox.Services.ExplorerIntegration;
 
 namespace SaltBox.Modules.FileExtractor;
 
-public class FileExtractorService
+public class FileExtractorService : IExplorerActionHandler
 {
     private readonly LogService _log;
-    private readonly ContextMenuManager _menuManager;
     private readonly CultureService _lang;
     private readonly IConfigService _configService;
-
     private FileExtractorConfig _config;
 
-    public FileExtractorService(LogService log, ContextMenuManager menuManager, CultureService lang, IConfigService configService)
+    string IExplorerActionHandler.ActionId => "SaltBox.FileExtractor";
+    ExplorerTarget IExplorerActionHandler.Target => ExplorerTarget.Directory;
+    string IExplorerActionHandler.DisplayName => "文件提取";
+
+    public FileExtractorService(LogService log, CultureService lang, IConfigService configService)
     {
         _log = log;
-        _menuManager = menuManager;
         _lang = lang;
         _configService = configService;
         _config = configService.Load<FileExtractorConfig>();
@@ -30,43 +32,12 @@ public class FileExtractorService
         {
             _config.IsEnabled = value;
             SaveConfig();
-
-            var exePath = Environment.ProcessPath;
-            if (string.IsNullOrEmpty(exePath))
-            {
-                _log.Error("Cannot update context menu: unable to determine executable path");
-                return;
-            }
-            if (value)
-            {
-                var command = $"\"{exePath}\" --extract-files \"%1\"";
-                _menuManager.RegisterSubItem("FileExtractor", "文件提取", command);
-            }
-            else
-            {
-                _menuManager.UnregisterSubItem("FileExtractor");
-            }
         }
     }
 
-    public void ApplyStartupSetting()
+    public void Execute(ExplorerContext context)
     {
-        _menuManager.Cleanup();
-
-        if (!IsEnabled)
-        {
-            _menuManager.UnregisterSubItem("FileExtractor");
-            return;
-        }
-
-        var exePath = Environment.ProcessPath;
-        if (string.IsNullOrEmpty(exePath))
-        {
-            _log.Error("Cannot apply startup setting: unable to determine executable path");
-            return;
-        }
-        var command = $"\"{exePath}\" --extract-files \"%1\"";
-        _menuManager.RegisterSubItem("FileExtractor", "文件提取", command);
+        ExtractFiles(context.PrimaryPath);
     }
 
     public void ExtractFiles(string rootFolderPath)

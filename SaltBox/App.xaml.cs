@@ -11,6 +11,7 @@ using SaltBox.Modules.DeveloperMode;
 using SaltBox.Modules.FileExtractor;
 using SaltBox.Modules.Screenshot;
 using SaltBox.Services;
+using SaltBox.Services.ExplorerIntegration;
 using SaltBox.ViewModels;
 using SaltBox.Views;
 using System.Runtime.InteropServices;
@@ -126,8 +127,12 @@ public partial class App : Application
                 services.AddSingleton<IConfigService, ConfigService>();
                 services.AddSingleton<InMemoryLogSink>(_ => _memorySink!);
                 services.AddSingleton<DeveloperModeService>();
-                services.AddSingleton<ContextMenuManager>();
+                services.AddSingleton<ExplorerVariableResolver>();
+                services.AddSingleton<ExplorerRegistration>();
+                services.AddSingleton<ExplorerActionManager>();
+                services.AddSingleton<ExplorerDispatcher>();
                 services.AddSingleton<FileExtractorService>();
+                services.AddSingleton<IExplorerActionHandler>(sp => sp.GetRequiredService<FileExtractorService>());
                 services.AddTransient<DeveloperModeViewModel>();
                 services.AddTransient<DeveloperModePage>();
                 services.AddTransient<HomeViewModel>();
@@ -144,25 +149,10 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        // Handle command-line file extraction before single-instance check
         var cmdArgs = Environment.GetCommandLineArgs();
-        for (int i = 1; i < cmdArgs.Length; i++)
-        {
-            if (string.Equals(cmdArgs[i], "--extract-files", StringComparison.OrdinalIgnoreCase) && i + 1 < cmdArgs.Length)
-            {
-                var folderPath = cmdArgs[i + 1];
-                try
-                {
-                    var extractor = _host.Services.GetRequiredService<FileExtractorService>();
-                    extractor.ExtractFiles(folderPath);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "File extraction failed for {Folder}", folderPath);
-                }
-                return;
-            }
-        }
+        var dispatcher = _host.Services.GetRequiredService<ExplorerDispatcher>();
+        if (dispatcher.Dispatch(cmdArgs))
+            return;
 
         if (!_isFirstInstance)
         {
@@ -191,9 +181,9 @@ public partial class App : Application
             updater.ConfigureFromConfig(config);
         }
 
-        // Apply startup settings for FileExtractor (register/unregister context menu)
-        var fileExtractor = _host.Services.GetRequiredService<FileExtractorService>();
-        fileExtractor.ApplyStartupSetting();
+        // Initialize Explorer integration infrastructure (register context menus)
+        var actionManager = _host.Services.GetRequiredService<ExplorerActionManager>();
+        actionManager.Initialize();
 
         var window = _host.Services.GetRequiredService<MainWindow>();
         window.Activate();
