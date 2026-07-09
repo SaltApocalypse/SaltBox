@@ -57,7 +57,7 @@ public partial class SettingsViewModel : ObservableObject
             catch
             {
                 var v = Assembly.GetEntryAssembly()?.GetName()?.Version;
-                return v is not null ? $"v{v.Major}.{v.Minor}.{v.Build}" : "v0.3.3";
+                return v is not null ? $"v{v.Major}.{v.Minor}.{v.Build}" : "v0.4.0";
             }
         }
     }

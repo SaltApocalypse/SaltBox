@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <Version>0.3.3</Version>
+    <Version>0.4.0</Version>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <Platforms>x64</Platforms>
@@ -27,8 +27,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\IdentityPackage\output\SaltBox.Identity.msix" Condition="Exists('..\IdentityPackage\output\SaltBox.Identity.msix')" CopyToOutputDirectory="PreserveNewest" Link="SaltBox.Identity.msix" />
-    <Content Include="Config\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\IdentityPackage\output\SaltBox.Identity.msix"
+      Condition="Exists('..\IdentityPackage\output\SaltBox.Identity.msix')"
+      CopyToOutputDirectory="PreserveNewest" Link="SaltBox.Identity.msix" />
+    <Content Include="Config\appsettings.json" Link="appsettings.json"
+      CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,7 +44,8 @@
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
-    <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls"
+      Version="8.2.251219" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
     <PackageReference Include="Vortice.Direct3D11" Version="2.4.2" />
     <PackageReference Include="Vortice.DXGI" Version="2.4.2" />

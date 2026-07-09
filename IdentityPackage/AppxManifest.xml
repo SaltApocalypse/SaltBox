@@ -4,7 +4,7 @@
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
-  <Identity Name="SaltBox" Publisher="CN=SaltA" Version="0.3.3.0" ProcessorArchitecture="neutral" />
+  <Identity Name="SaltBox" Publisher="CN=SaltA" Version="0.4.0.0" ProcessorArchitecture="neutral" />
   <Properties>
     <DisplayName>SaltBox</DisplayName>
     <PublisherDisplayName>SaltA</PublisherDisplayName>
@@ -15,15 +15,18 @@
     <Resource Language="x-generate" />
   </Resources>
   <Dependencies>
-    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0"
+      MaxVersionTested="10.0.26100.0" />
   </Dependencies>
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
     <rescap:Capability Name="unvirtualizedResources" />
   </Capabilities>
   <Applications>
-    <Application Id="App" Executable="SaltBox.exe" uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="win32App">
-      <uap:VisualElements AppListEntry="none" DisplayName="SaltBox" Description="SaltBox" BackgroundColor="transparent"
+    <Application Id="App" Executable="SaltBox.exe" uap10:TrustLevel="mediumIL"
+      uap10:RuntimeBehavior="win32App">
+      <uap:VisualElements AppListEntry="none" DisplayName="SaltBox" Description="SaltBox"
+        BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png" />
     </Application>
